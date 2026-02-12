@@ -1,3 +1,4 @@
+// connect to database and check email & password against record. to add hashing
 <?php
 session_start();
 
