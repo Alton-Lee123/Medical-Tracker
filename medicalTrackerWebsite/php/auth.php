@@ -1,4 +1,3 @@
-// start session using cookie data
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {

@@ -1,5 +1,4 @@
-// used to add record for user creation, medicine added/ schedule added, etc.
-
+<?php
 function insertRecord($table, $data) {
     $pdo = getDBConnection();
 

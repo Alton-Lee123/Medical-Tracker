@@ -1,4 +1,3 @@
-// needs actual database information, currently just a shell to be updated
 <?php
 
 function getDBConnection() {

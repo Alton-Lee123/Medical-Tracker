@@ -1,4 +1,3 @@
-// get record/s function
 <?php
 require_once "db.php";
 
