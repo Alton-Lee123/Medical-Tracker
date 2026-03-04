@@ -18,7 +18,7 @@ $stmt->execute([
 ]);
 
 $med_id = $pdo->lastInsertId();
-
+// a
 /* Insert times */
 foreach ($data['times'] as $time) {
     $t = $pdo->prepare("
