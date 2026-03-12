@@ -10,7 +10,7 @@ class PatientController {
     public function getAll() {
         $stmt = $this->db->prepare('
             SELECT
-                p.id, p.date_of_birth, p.`condition`,
+                p.id, p.date_of_birth, p.`condition`, p.user_id,
                 u.name, u.surname, u.email,
                 d.id AS doctor_id
             FROM patients p
@@ -22,15 +22,16 @@ class PatientController {
     }
 
     public function getOne($id) {
+        // Support lookup by user_id or patient id
         $stmt = $this->db->prepare('
             SELECT
-                p.id, p.date_of_birth, p.`condition`,
+                p.id, p.date_of_birth, p.`condition`, p.user_id,
                 u.name, u.surname, u.email
             FROM patients p
             JOIN users u ON u.id = p.user_id
-            WHERE p.id = ?
+            WHERE p.id = ? OR p.user_id = ?
         ');
-        $stmt->execute([$id]);
+        $stmt->execute([$id, $id]);
         $patient = $stmt->fetch();
 
         if (!$patient) {
@@ -39,9 +40,9 @@ class PatientController {
             return;
         }
 
-        // Also fetch their medications
+        // Fetch their medications
         $stmt = $this->db->prepare('SELECT * FROM medications WHERE patient_id = ?');
-        $stmt->execute([$id]);
+        $stmt->execute([$patient['id']]);
         $patient['medications'] = $stmt->fetchAll();
 
         echo json_encode($patient);
