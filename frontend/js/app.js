@@ -1,5 +1,61 @@
 // Main Application Logic
 
+async function handleLogin() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errorEl  = document.getElementById('login-error');
+
+    try {
+        const data = await apiLogin(email, password);
+        document.getElementById('login-screen').classList.add('hidden');
+        switchLayout(data.role);
+        await initAppData();
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function handleRegister() {
+    const name     = document.getElementById('reg-name').value.trim();
+    const surname  = document.getElementById('reg-surname').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const role     = document.getElementById('reg-role').value;
+    const errorEl  = document.getElementById('register-error');
+
+    try {
+        await apiRegister(name, surname, email, password, role);
+        // Auto login after register
+        const data = await apiLogin(email, password);
+        document.getElementById('register-screen').classList.add('hidden');
+        switchLayout(data.role);
+        await initAppData();
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function showRegister() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('register-screen').classList.remove('hidden');
+}
+
+function showLogin() {
+    document.getElementById('register-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+// Check if already logged in on page load
+window.addEventListener('load', async function() {
+    const user = getUser();
+    if (user && getToken()) {
+        document.getElementById('login-screen').classList.add('hidden');
+        switchLayout(user.role);
+        await initAppData();
+    }
+});
 // Get elements
 const mobileLayout = document.getElementById('mobile-layout');
 const desktopLayout = document.getElementById('desktop-layout');
@@ -421,7 +477,7 @@ document.addEventListener('click', function(e) {
 });
 
 // Starts with patient view
-switchLayout('patient');
+// switchLayout('patient');
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DOCTOR VIEW
