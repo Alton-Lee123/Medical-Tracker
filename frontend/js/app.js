@@ -23,6 +23,7 @@ function switchLayout(role) {
         desktopLayout.classList.remove('hidden');
         doctorNav.classList.remove('hidden');
         adminNav.classList.add('hidden');
+        loadDoctorDashboard();
     }
     else if (role === 'admin') {
         // Show desktop layout with admin nav
@@ -30,6 +31,7 @@ function switchLayout(role) {
         desktopLayout.classList.remove('hidden');
         doctorNav.classList.add('hidden');
         adminNav.classList.remove('hidden');
+        loadAdminDashboard();
     }
 
     // Sync both dropdowns
@@ -285,7 +287,7 @@ bottomNav.addEventListener('click', function(e) {
 // History Page Variables
 let currentWeekStart = getWeekStart(new Date());
 
-// Get start of week (Sunday)
+// Get week start
 function getWeekStart(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -294,7 +296,7 @@ function getWeekStart(date) {
     return d;
 }
 
-// Format date as "Feb 16"
+// Format date
 function formatShortDate(date) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[date.getMonth()] + ' ' + date.getDate();
@@ -534,3 +536,51 @@ function deleteMedication(id) {
       document.getElementById('med-time').value = med.time;
       document.getElementById('add-med-modal').classList.remove('hidden');
   }
+
+
+  
+
+            /** Doctor/admin view */
+
+        // Sidebar navigation
+
+        var sidebar = document.getElementById('sidebar');
+  sidebar.addEventListener('click', function(e) {
+      var sidebarItem = e.target.closest('.sidebar-item');
+      if (sidebarItem) {
+        var page = sidebarItem.dataset.page;
+
+        var allItems = sidebar.querySelectorAll('.sidebar-item');
+          allItems.forEach(function(item) {
+              item.classList.remove('active');
+            
+            });
+
+          sidebarItem.classList.add('active');
+          loadDesktopPage(page);
+      }
+  });
+
+  function loadDesktopPage(page) {
+      var role = document.getElementById('role-selector-desktop').value;
+
+      if (role === 'doctor') {
+          if (page === 'dashboard') loadDoctorDashboard();
+          else loadPlaceholderPage(page);
+      } else if (role === 'admin') {
+          if (page === 'dashboard') loadAdminDashboard();
+          else loadPlaceholderPage(page);
+      }
+  }
+
+  function loadPlaceholderPage(page) {
+      var content = document.getElementById('desktop-content');
+      var title = page.charAt(0).toUpperCase() + page.slice(1);
+      content.innerHTML =
+          '<div style="padding: 40px;">' +
+              '<h1 class="page-title">' + title + '</h1>' +
+              '<p class="page-subtitle">Coming soon</p>' +
+          '</div>';
+  }
+
+
