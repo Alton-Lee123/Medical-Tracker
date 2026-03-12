@@ -1280,6 +1280,8 @@ body {
 .dl-dot  { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
 /* Messages */
+
+
 .msg-layout {
     display: flex;
     flex: 1;
