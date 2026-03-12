@@ -1,11 +1,12 @@
-// Main Application Logic
-
-// ── Auth UI ───────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════════════════════════
 
 async function handleLogin() {
     const email    = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const errorEl  = document.getElementById('login-error');
+    errorEl.classList.add('hidden');
     try {
         const data = await apiLogin(email, password);
         document.getElementById('login-screen').classList.add('hidden');
@@ -24,6 +25,7 @@ async function handleRegister() {
     const password = document.getElementById('reg-password').value;
     const role     = document.getElementById('reg-role').value;
     const errorEl  = document.getElementById('register-error');
+    errorEl.classList.add('hidden');
     try {
         await apiRegister(name, surname, email, password, role);
         const data = await apiLogin(email, password);
@@ -40,7 +42,6 @@ function showRegister() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('register-screen').classList.remove('hidden');
 }
-
 function showLogin() {
     document.getElementById('register-screen').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
@@ -55,100 +56,35 @@ window.addEventListener('load', async function() {
     }
 });
 
-// ── Layout ────────────────────────────────────────────────────────────────────
-
-const mobileLayout        = document.getElementById('mobile-layout');
-const desktopLayout       = document.getElementById('desktop-layout');
-const roleSelector        = document.getElementById('role-selector');
-const roleSelectorDesktop = document.getElementById('role-selector-desktop');
-const doctorNav           = document.getElementById('doctor-nav');
-const adminNav            = document.getElementById('admin-nav');
+// ══════════════════════════════════════════════════════════════════════════════
+//  LAYOUT
+// ══════════════════════════════════════════════════════════════════════════════
 
 function switchLayout(role) {
+    const mobile  = document.getElementById('mobile-layout');
+    const desktop = document.getElementById('desktop-layout');
+    const docNav  = document.getElementById('doctor-nav');
+    const admNav  = document.getElementById('admin-nav');
+
     if (role === 'patient') {
-        mobileLayout.classList.remove('hidden');
-        desktopLayout.classList.add('hidden');
-        loadPatientDashboard();
+        mobile.classList.remove('hidden');
+        desktop.classList.add('hidden');
     } else if (role === 'doctor') {
-        mobileLayout.classList.add('hidden');
-        desktopLayout.classList.remove('hidden');
-        doctorNav.classList.remove('hidden');
-        adminNav.classList.add('hidden');
-        showDoctorPage('dashboard');
+        mobile.classList.add('hidden');
+        desktop.classList.remove('hidden');
+        if (docNav) docNav.classList.remove('hidden');
+        if (admNav) admNav.classList.add('hidden');
     } else if (role === 'admin') {
-        mobileLayout.classList.add('hidden');
-        desktopLayout.classList.remove('hidden');
-        doctorNav.classList.add('hidden');
-        adminNav.classList.remove('hidden');
+        mobile.classList.add('hidden');
+        desktop.classList.remove('hidden');
+        if (docNav) docNav.classList.add('hidden');
+        if (admNav) admNav.classList.remove('hidden');
     }
-    roleSelector.value        = role;
-    roleSelectorDesktop.value = role;
 }
 
-roleSelector.addEventListener('change', function() { switchLayout(this.value); });
-roleSelectorDesktop.addEventListener('change', function() { switchLayout(this.value); });
-
-// ── Patient Dashboard ─────────────────────────────────────────────────────────
-
-function loadPatientDashboard() {
-    showPatientPage('dashboard');
-    setCurrentDate();
-    updateAdherenceRate();
-    loadMedications();
-}
-
-function setCurrentDate() {
-    const dateElement     = document.getElementById('current-date');
-    const greetingElement = document.querySelector('.greeting-title');
-    const today           = new Date();
-    const hours           = today.getHours();
-    let greeting = 'Good morning!';
-    if (hours >= 12 && hours < 17) greeting = 'Good afternoon!';
-    else if (hours >= 17)          greeting = 'Good evening!';
-    greetingElement.textContent = greeting;
-    dateElement.textContent = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-}
-
-function updateAdherenceRate() {
-    const today     = new Date().toISOString().split('T')[0];
-    const taken     = getTakenForDate(today);
-    const total     = appData.medications.length;
-    if (total === 0) { setAdherenceRate(0); return; }
-    setAdherenceRate(Math.round((taken.length / total) * 100));
-}
-
-function setAdherenceRate(rate) {
-    document.getElementById('adherence-percent').textContent     = rate + '%';
-    document.getElementById('adherence-circle-text').textContent = rate + '%';
-    document.getElementById('progress-fill').style.width         = rate + '%';
-}
-
-function loadMedications() {
-    const el = document.getElementById('medications-list');
-    el.innerHTML = '';
-    appData.medications.forEach(function(med) { el.appendChild(createMedicationCard(med)); });
-}
-
-function createMedicationCard(med) {
-    const card     = document.createElement('div');
-    card.className = 'medication-card';
-    card.id        = 'med-' + med.id;
-    const taken    = isTakenToday(med.id);
-    card.innerHTML =
-        '<div class="medication-info">' +
-            '<div class="medication-icon">' + med.name.charAt(0) + '</div>' +
-            '<div class="medication-details">' +
-                '<span class="medication-name">' + med.name + '</span>' +
-                '<span class="medication-dosage">' + med.dose + '</span>' +
-            '</div>' +
-        '</div>' +
-        '<div class="medication-time">' +
-            '<span class="medication-time-text">' + formatTime(med.time) + '</span>' +
-            '<p class="medication-frequency">' + med.frequency + '</p>' +
-            '<button class="' + (taken ? 'btn-taken taken' : 'btn-taken') + '" onclick="markAsTaken(' + med.id + ')">' + (taken ? 'Taken' : 'Mark as Taken') + '</button>' +
-        '</div>';
-    return card;
-}
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — SHARED UTILS
+// ══════════════════════════════════════════════════════════════════════════════
 
 function formatTime(time) {
     const parts   = time.split(':');
@@ -159,37 +95,123 @@ function formatTime(time) {
     return hours + ':' + minutes + ' ' + ampm;
 }
 
+function formatDateStr(date) {
+    return date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0');
+}
+
+function showPatientPage(pageName) {
+    ['patient-dashboard','patient-medications','patient-history','patient-reminders','patient-messages','patient-settings']
+        .forEach(function(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+
+    const target = document.getElementById('patient-' + pageName);
+    if (target) target.classList.remove('hidden');
+
+    document.querySelectorAll('#bottom-nav .nav-item').forEach(function(item) {
+        item.classList.toggle('active', item.dataset.page === pageName);
+    });
+
+    if      (pageName === 'dashboard')   loadPatientDashboard();
+    else if (pageName === 'medications') loadAllMedications();
+    else if (pageName === 'history')     loadHistoryPage();
+    else if (pageName === 'reminders')   loadRemindersPage();
+    else if (pageName === 'messages')    loadPatientMessages();
+    else if (pageName === 'settings')    loadPatientSettings();
+}
+
+document.getElementById('bottom-nav').addEventListener('click', function(e) {
+    const item = e.target.closest('.nav-item');
+    if (item) showPatientPage(item.dataset.page);
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+
+function loadPatientDashboard() {
+    setCurrentDate();
+    updateAdherenceRate();
+    loadMedications();
+}
+
+function setCurrentDate() {
+    const dateEl     = document.getElementById('current-date');
+    const greetingEl = document.querySelector('.greeting-title');
+    const hours      = new Date().getHours();
+    let greeting = 'Good morning!';
+    if (hours >= 12 && hours < 17) greeting = 'Good afternoon!';
+    else if (hours >= 17)          greeting = 'Good evening!';
+    if (greetingEl) greetingEl.textContent = greeting;
+    if (dateEl)     dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+function updateAdherenceRate() {
+    const today = new Date().toISOString().split('T')[0];
+    const total = appData.medications.length;
+    const taken = getTakenForDate(today).length;
+    const rate  = total === 0 ? 0 : Math.round((taken / total) * 100);
+    const pctEl  = document.getElementById('adherence-percent');
+    const circEl = document.getElementById('adherence-circle-text');
+    const barEl  = document.getElementById('progress-fill');
+    if (pctEl)  pctEl.textContent  = rate + '%';
+    if (circEl) circEl.textContent = rate + '%';
+    if (barEl)  barEl.style.width  = rate + '%';
+}
+
+function loadMedications() {
+    const el = document.getElementById('medications-list');
+    if (!el) return;
+    el.innerHTML = '';
+    if (appData.medications.length === 0) {
+        el.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:20px">No medications added yet.</p>';
+        return;
+    }
+    appData.medications.forEach(function(med) { el.appendChild(createMedicationCard(med)); });
+}
+
+function createMedicationCard(med) {
+    const card     = document.createElement('div');
+    card.className = 'medication-card';
+    card.id        = 'med-' + med.id;
+    const taken    = isTakenToday(med.id);
+    card.innerHTML =
+        '<div class="medication-info">' +
+            '<div class="medication-icon">' + med.name.charAt(0).toUpperCase() + '</div>' +
+            '<div class="medication-details">' +
+                '<span class="medication-name">' + med.name + '</span>' +
+                '<span class="medication-dosage">' + med.dose + ' · ' + med.frequency + '</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="medication-time">' +
+            '<span class="medication-time-text">' + formatTime(med.time) + '</span>' +
+            '<button class="' + (taken ? 'btn-taken taken' : 'btn-taken') + '" onclick="markAsTaken(' + med.id + ')">' +
+                (taken ? '✓ Taken' : 'Mark as Taken') +
+            '</button>' +
+        '</div>';
+    return card;
+}
+
 async function markAsTaken(id) {
     if (!isTakenToday(id)) await recordTaken(id);
     loadMedications();
     updateAdherenceRate();
     const hp = document.getElementById('patient-history');
-    if (hp && !hp.classList.contains('hidden')) loadHistoryPage();
+    if (hp && !hp.classList.contains('hidden')) renderHistoryTable();
 }
 
-// ── Patient Pages ─────────────────────────────────────────────────────────────
-
-function showPatientPage(pageName) {
-    ['patient-dashboard','patient-medications','patient-history','patient-reminders'].forEach(function(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-
-    if      (pageName === 'dashboard')   document.getElementById('patient-dashboard').classList.remove('hidden');
-    else if (pageName === 'medications') { document.getElementById('patient-medications').classList.remove('hidden'); loadAllMedications(); }
-    else if (pageName === 'history')     { const el = document.getElementById('patient-history');   if (el) { el.classList.remove('hidden'); loadHistoryPage(); } }
-    else if (pageName === 'reminders')   { const el = document.getElementById('patient-reminders'); if (el) { el.classList.remove('hidden'); loadRemindersPage(); } }
-
-    document.querySelectorAll('#bottom-nav .nav-item').forEach(function(item) {
-        item.classList.toggle('active', item.dataset.page === pageName);
-    });
-}
-
-// ── Medications Page ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — MEDICATIONS PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 
 function loadAllMedications() {
     const el = document.getElementById('all-medications-list');
+    if (!el) return;
     el.innerHTML = '';
+    if (appData.medications.length === 0) {
+        el.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:20px">No medications yet. Tap + Add to get started.</p>';
+        return;
+    }
     appData.medications.forEach(function(med) { el.appendChild(createFullMedicationCard(med)); });
 }
 
@@ -199,7 +221,7 @@ function createFullMedicationCard(med) {
     card.innerHTML =
         '<div class="medication-card-header">' +
             '<div class="medication-info">' +
-                '<div class="medication-icon">' + med.name.charAt(0) + '</div>' +
+                '<div class="medication-icon">' + med.name.charAt(0).toUpperCase() + '</div>' +
                 '<div class="medication-details">' +
                     '<span class="medication-name">' + med.name + '</span>' +
                     '<span class="medication-dosage">' + med.dose + '</span>' +
@@ -218,9 +240,12 @@ function createFullMedicationCard(med) {
 }
 
 async function deleteMedication(id) {
+    if (!confirm('Delete this medication?')) return;
     await apiDeleteMedication(id);
     appData.medications = appData.medications.filter(function(m) { return m.id !== id; });
     loadAllMedications();
+    loadMedications();
+    updateAdherenceRate();
 }
 
 function editMedication(id) {
@@ -230,7 +255,9 @@ function editMedication(id) {
     document.getElementById('med-name').value      = med.name;
     document.getElementById('med-dose').value      = med.dose;
     document.getElementById('med-frequency').value = med.frequency;
-    document.getElementById('med-time').value      = med.time.substring(0,5);
+    document.getElementById('med-time').value      = med.time.substring(0, 5);
+    document.getElementById('modal-title').textContent  = 'Edit Medication';
+    document.getElementById('modal-submit').textContent = 'Save Changes';
     document.getElementById('add-med-modal').classList.remove('hidden');
 }
 
@@ -239,24 +266,27 @@ var editingMedId = null;
 document.getElementById('btn-add-med').addEventListener('click', function() {
     editingMedId = null;
     document.getElementById('add-med-form').reset();
+    document.getElementById('modal-title').textContent  = 'Add Medication';
+    document.getElementById('modal-submit').textContent = 'Add Medication';
     document.getElementById('add-med-modal').classList.remove('hidden');
 });
 
 document.getElementById('cancel-modal').addEventListener('click', function() {
     document.getElementById('add-med-modal').classList.add('hidden');
+    editingMedId = null;
 });
 
 document.getElementById('add-med-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const name      = document.getElementById('med-name').value;
-    const dose      = document.getElementById('med-dose').value;
+    const name      = document.getElementById('med-name').value.trim();
+    const dose      = document.getElementById('med-dose').value.trim();
     const frequency = document.getElementById('med-frequency').value;
     const time      = document.getElementById('med-time').value;
 
     if (editingMedId !== null) {
         await apiUpdateMedication(editingMedId, name, dose, frequency, time + ':00');
         const idx = appData.medications.findIndex(function(m) { return m.id === editingMedId; });
-        appData.medications[idx] = { id: editingMedId, name, dose, frequency, time: time + ':00' };
+        if (idx !== -1) appData.medications[idx] = { id: editingMedId, name, dose, frequency, time: time + ':00' };
         editingMedId = null;
     } else {
         const result = await apiAddMedication(appData.patientId, name, dose, frequency, time + ':00');
@@ -266,14 +296,13 @@ document.getElementById('add-med-form').addEventListener('submit', async functio
     document.getElementById('add-med-modal').classList.add('hidden');
     document.getElementById('add-med-form').reset();
     loadAllMedications();
+    loadMedications();
+    updateAdherenceRate();
 });
 
-document.getElementById('bottom-nav').addEventListener('click', function(e) {
-    const item = e.target.closest('.nav-item');
-    if (item) showPatientPage(item.dataset.page);
-});
-
-// ── History Page ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — HISTORY PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 
 let currentWeekStart = getWeekStart(new Date());
 
@@ -288,14 +317,13 @@ function formatShortDate(date) {
     return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.getMonth()] + ' ' + date.getDate();
 }
 
-function formatDateStr(date) {
-    return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+function loadHistoryPage() {
+    updateWeekDisplay();
+    renderHistoryTable();
 }
 
-function loadHistoryPage() { updateWeekDisplay(); renderHistoryTable(); }
-
 function updateWeekDisplay() {
-    const weekEnd = new Date(currentWeekStart);
+    const weekEnd   = new Date(currentWeekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     const adherence = calculateAdherence(currentWeekStart, weekEnd);
     const wd = document.getElementById('week-dates');
@@ -315,7 +343,8 @@ function renderHistoryTable() {
     let html = '<thead><tr><th>Medication</th>';
     for (let i = 0; i < 7; i++) {
         const d = new Date(currentWeekStart); d.setDate(d.getDate() + i);
-        html += '<th' + (d.getTime() === today.getTime() ? ' class="today"' : '') + '><div>' + days[i] + '</div><div class="day-date">' + formatShortDate(d) + '</div></th>';
+        html += '<th' + (d.getTime() === today.getTime() ? ' class="today"' : '') + '>' +
+            '<div>' + days[i] + '</div><div class="day-date">' + formatShortDate(d) + '</div></th>';
     }
     html += '</tr></thead><tbody>';
 
@@ -325,12 +354,12 @@ function renderHistoryTable() {
         appData.medications.forEach(function(med) {
             html += '<tr><td><div class="med-cell-name">' + med.name + '</div><div class="med-cell-dosage">' + med.dose + '</div></td>';
             for (let i = 0; i < 7; i++) {
-                const d      = new Date(currentWeekStart); d.setDate(d.getDate() + i);
-                const taken  = getTakenForDate(formatDateStr(d)).some(function(t) { return t.visaId === med.id; });
+                const d     = new Date(currentWeekStart); d.setDate(d.getDate() + i);
+                const taken = getTakenForDate(formatDateStr(d)).some(function(t) { return t.visaId === med.id; });
                 let cls = 'scheduled', icon = '';
-                if      (d > today)  { cls = 'scheduled'; }
-                else if (taken)      { cls = 'taken';  icon = '✓'; }
-                else if (d < today)  { cls = 'missed'; icon = '✗'; }
+                if      (d > today) { cls = 'scheduled'; }
+                else if (taken)     { cls = 'taken';  icon = '✓'; }
+                else                { cls = 'missed'; icon = '✗'; }
                 html += '<td><span class="status-icon ' + cls + '">' + icon + '</span></td>';
             }
             html += '</tr>';
@@ -345,24 +374,249 @@ document.addEventListener('click', function(e) {
     else if (e.target.id === 'current-week-btn') { currentWeekStart = getWeekStart(new Date()); loadHistoryPage(); }
 });
 
-// ── Reminders Page ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — REMINDERS PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 
-function loadRemindersPage() {
+async function loadRemindersPage() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('todays-doses').textContent = appData.medications.length;
-    document.getElementById('doses-taken').textContent  = getTakenForDate(today).length;
+    const el_td = document.getElementById('todays-doses');
+    const el_tk = document.getElementById('doses-taken');
+    if (el_td) el_td.textContent = appData.medications.length;
+    if (el_tk) el_tk.textContent = getTakenForDate(today).length;
 
+    // Today's medication schedule
     const list = document.getElementById('reminders-list');
-    list.innerHTML = '';
-    appData.medications.forEach(function(med) {
-        list.innerHTML += '<div class="reminder-card"><div class="reminder-info"><div class="reminder-icon">' + med.name.charAt(0) + '</div><div class="reminder-details"><span class="reminder-name">' + med.name + '</span><span class="reminder-dose">' + med.dose + '</span></div></div><span class="reminder-time">' + formatTime(med.time) + '</span></div>';
+    if (list) {
+        list.innerHTML = '';
+        if (!appData.medications.length) {
+            list.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:16px">No medications scheduled.</p>';
+        } else {
+            appData.medications.forEach(function(med) {
+                const taken = isTakenToday(med.id);
+                list.innerHTML +=
+                    '<div class="reminder-card">' +
+                        '<div class="reminder-info">' +
+                            '<div class="reminder-icon' + (taken ? ' taken' : '') + '">' + med.name.charAt(0).toUpperCase() + '</div>' +
+                            '<div class="reminder-details">' +
+                                '<span class="reminder-name">' + med.name + '</span>' +
+                                '<span class="reminder-dose">' + med.dose + ' · ' + med.frequency + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
+                            '<span class="reminder-time">' + formatTime(med.time) + '</span>' +
+                            (taken ? '<span style="font-size:11px;color:var(--accent);font-weight:600">✓ Taken</span>' : '') +
+                        '</div>' +
+                    '</div>';
+            });
+        }
+    }
+
+    // Prescriptions
+    const rxList = document.getElementById('prescriptions-list');
+    if (rxList && appData.patientId) {
+        rxList.innerHTML = '<p style="color:var(--muted-foreground);font-size:13px;padding:8px 0">Loading...</p>';
+        try {
+            const rxs = await apiGetPrescriptions(appData.patientId);
+            if (!rxs.length) {
+                rxList.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:16px">No prescriptions on file.</p>';
+            } else {
+                rxList.innerHTML = '';
+                rxs.forEach(function(rx) {
+                    const isRefillDue = rx.status === 'refill-due';
+                    const statusColor = rx.status === 'active' ? 'var(--accent)' : isRefillDue ? '#f59e0b' : 'var(--muted-foreground)';
+                    const statusLabel = rx.status === 'active' ? 'Active' : isRefillDue ? 'Refill Due' : rx.status;
+                    rxList.innerHTML +=
+                        '<div class="reminder-card">' +
+                            '<div class="reminder-info">' +
+                                '<div class="reminder-icon" style="background:var(--primary);color:#fff">' + rx.medication.charAt(0).toUpperCase() + '</div>' +
+                                '<div class="reminder-details">' +
+                                    '<span class="reminder-name">' + rx.medication + ' <strong>' + rx.dose + '</strong></span>' +
+                                    '<span class="reminder-dose">' + rx.frequency + (rx.doctor_name ? ' · Dr. ' + rx.doctor_name + ' ' + rx.doctor_surname : '') + '</span>' +
+                                    (rx.refill_date ? '<span style="font-size:11px;color:var(--muted-foreground)">Refill: ' + rx.refill_date + '</span>' : '') +
+                                '</div>' +
+                            '</div>' +
+                            '<span style="font-size:11px;font-weight:600;color:' + statusColor + '">' + statusLabel + '</span>' +
+                        '</div>';
+                });
+            }
+        } catch(err) {
+            rxList.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:16px">Could not load prescriptions.</p>';
+        }
+    }
+
+    // Appointments
+    const apts = document.getElementById('appointments-list');
+    if (apts) {
+        apts.innerHTML = '';
+        if (!appData.appointments.length) {
+            apts.innerHTML = '<p style="color:var(--muted-foreground);text-align:center;padding:16px">No upcoming appointments.</p>';
+        } else {
+            appData.appointments.forEach(function(apt) {
+                const aptDate    = new Date(apt.date + 'T' + (apt.time || '00:00:00'));
+                const isUpcoming = aptDate >= new Date();
+                apts.innerHTML +=
+                    '<div class="reminder-card">' +
+                        '<div class="reminder-info">' +
+                            '<div class="reminder-icon">📅</div>' +
+                            '<div class="reminder-details">' +
+                                '<span class="reminder-name">' + apt.title + '</span>' +
+                                '<span class="reminder-dose">' + apt.date + (apt.time ? ' at ' + formatTime(apt.time) : '') + (apt.doctor_name ? ' · Dr. ' + apt.doctor_name : '') + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        (isUpcoming ? '<span style="font-size:11px;color:var(--primary);font-weight:600">Upcoming</span>' : '') +
+                    '</div>';
+            });
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — MESSAGES PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+
+let patientActiveReceiver = null;
+
+async function loadPatientMessages() {
+    const container = document.getElementById('patient-messages');
+    if (!container) return;
+    container.innerHTML = '<p style="padding:20px;color:var(--muted-foreground)">Loading...</p>';
+
+    const threads = await apiGetThreads().catch(() => []);
+    const userId  = getUser().id;
+
+    // Group messages by the other person
+    const threadMap = {};
+    threads.forEach(function(m) {
+        const otherId   = m.sender_id === userId ? m.receiver_id   : m.sender_id;
+        const otherName = m.sender_id === userId
+            ? (m.receiver_name + ' ' + m.receiver_surname)
+            : (m.sender_name  + ' ' + m.sender_surname);
+        if (!threadMap[otherId]) threadMap[otherId] = { id: otherId, name: otherName, messages: [], unread: false };
+        threadMap[otherId].messages.push(m);
+        if (!m.is_read && m.sender_id !== userId) threadMap[otherId].unread = true;
     });
 
-    const apts = document.getElementById('appointments-list');
-    apts.innerHTML = '';
-    appData.appointments.forEach(function(apt) {
-        apts.innerHTML += '<div class="reminder-card"><div class="reminder-info"><div class="reminder-icon">📅</div><div class="reminder-details"><span class="reminder-name">' + apt.title + '</span><span class="reminder-dose">' + (apt.doctor_name || '') + '</span></div></div><span class="reminder-time">' + apt.date + '</span></div>';
-    });
+    const keys = Object.keys(threadMap);
+    if (!patientActiveReceiver && keys.length) patientActiveReceiver = parseInt(keys[0]);
+
+    const activeThread = patientActiveReceiver ? threadMap[patientActiveReceiver] : null;
+
+    // Thread list
+    const listHtml = keys.length === 0
+        ? '<p style="padding:16px;color:var(--muted-foreground)">No messages yet.</p>'
+        : keys.map(function(k) {
+            const t    = threadMap[k];
+            const last = t.messages[t.messages.length - 1];
+            return '<div class="msg-thread-item' + (t.id === patientActiveReceiver ? ' active' : '') + (t.unread ? ' unread' : '') + '" onclick="selectPatientThread(' + t.id + ')">' +
+                '<div class="msg-thread-avatar">' + t.name.split(' ').map(function(w){return w[0];}).join('') + '</div>' +
+                '<div class="msg-thread-info">' +
+                    '<div class="msg-thread-top"><span class="msg-thread-name">' + t.name + '</span></div>' +
+                    '<span class="msg-thread-preview">' + last.body.substring(0,50) + (last.body.length>50?'…':'') + '</span>' +
+                '</div>' +
+                (t.unread ? '<span class="unread-dot"></span>' : '') +
+            '</div>';
+          }).join('');
+
+    // Chat bubbles
+    const bubblesHtml = activeThread
+        ? activeThread.messages.map(function(m) {
+            const mine = m.sender_id === userId;
+            return '<div class="msg-bubble-wrap ' + (mine ? 'bubble-right' : 'bubble-left') + '">' +
+                '<div class="msg-bubble ' + (mine ? 'bubble-doc' : 'bubble-patient') + '">' +
+                '<p>' + m.body + '</p>' +
+                '<span class="bubble-time">' + new Date(m.sent_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</span>' +
+                '</div></div>';
+          }).join('')
+        : '<p style="padding:20px;color:var(--muted-foreground);text-align:center">Select a conversation.</p>';
+
+    const chatHeader = activeThread
+        ? '<div class="msg-chat-header">' +
+            '<div class="msg-thread-avatar">' + activeThread.name.split(' ').map(function(w){return w[0];}).join('') + '</div>' +
+            '<span class="msg-chat-name">' + activeThread.name + '</span>' +
+          '</div>'
+        : '';
+
+    container.innerHTML =
+        '<div class="msg-layout" style="height:calc(100vh - 120px)">' +
+            '<div class="msg-sidebar">' +
+                '<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid var(--border)">Messages</div>' +
+                '<div class="msg-thread-list">' + listHtml + '</div>' +
+            '</div>' +
+            '<div class="msg-chat">' +
+                chatHeader +
+                '<div class="msg-chat-body" id="patient-chat-body">' + bubblesHtml + '</div>' +
+                '<div class="msg-input-row">' +
+                    '<input id="patient-msg-input" class="msg-input" placeholder="Type a message..." onkeydown="if(event.key===\'Enter\')sendPatientMessage()">' +
+                    '<button class="btn-primary" onclick="sendPatientMessage()">Send</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    setTimeout(function() {
+        const b = document.getElementById('patient-chat-body');
+        if (b) b.scrollTop = b.scrollHeight;
+    }, 50);
+}
+
+function selectPatientThread(id) {
+    patientActiveReceiver = id;
+    loadPatientMessages();
+}
+
+async function sendPatientMessage() {
+    const input = document.getElementById('patient-msg-input');
+    const text  = input ? input.value.trim() : '';
+    if (!text || !patientActiveReceiver) return;
+    await apiSendMessage(getUser().id, patientActiveReceiver, text);
+    input.value = '';
+    loadPatientMessages();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PATIENT — SETTINGS PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+
+function loadPatientSettings() {
+    const container = document.getElementById('patient-settings');
+    if (!container) return;
+    const user = getUser();
+    container.innerHTML =
+        '<div style="padding:16px">' +
+            '<h1 class="page-title" style="margin-bottom:16px">Settings</h1>' +
+
+            '<div class="card" style="margin-bottom:16px">' +
+                '<h2 class="section-title">👤 Profile</h2>' +
+                '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+                    '<div class="medication-icon" style="width:48px;height:48px;font-size:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:#fff">' +
+                        user.name.charAt(0) + user.surname.charAt(0) +
+                    '</div>' +
+                    '<div>' +
+                        '<p style="font-weight:600">' + user.name + ' ' + user.surname + '</p>' +
+                        '<p style="font-size:13px;color:var(--muted-foreground)">Patient</p>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="card" style="margin-bottom:16px">' +
+                '<h2 class="section-title">🔔 Notifications</h2>' +
+                '<div class="settings-list">' +
+                    '<div class="setting-item"><div class="setting-info"><p class="setting-label">Medication Reminders</p><p class="setting-desc">Get notified before each dose</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>' +
+                    '<div class="setting-item"><div class="setting-info"><p class="setting-label">Missed Dose Alerts</p><p class="setting-desc">Alert when a dose is missed</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>' +
+                    '<div class="setting-item"><div class="setting-info"><p class="setting-label">Appointment Reminders</p><p class="setting-desc">24h before each appointment</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="card">' +
+                '<h2 class="section-title">🔒 Account</h2>' +
+                '<button class="btn-delete" style="width:100%;padding:12px;margin-top:8px" onclick="handleLogout()">Sign Out</button>' +
+            '</div>' +
+        '</div>';
+}
+
+async function handleLogout() {
+    await apiLogout().catch(function(){});
+    location.reload();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -387,54 +641,73 @@ document.getElementById('doctor-nav').addEventListener('click', function(e) {
     if (item) showDoctorPage(item.dataset.page);
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function adherenceColor(pct) {
     if (pct >= 80) return 'var(--accent)';
     if (pct >= 60) return '#f59e0b';
     return 'var(--destructive)';
 }
-
 function statusBadge(status) {
-    const map = { 'stable':['badge-stable','Stable'], 'at-risk':['badge-warning','At Risk'], 'critical':['badge-critical','Critical'], 'active':['badge-stable','Active'], 'refill-due':['badge-warning','Refill Due'], 'inactive':['badge-muted','Inactive'] };
+    const map = { 'stable':['badge-stable','Stable'],'at-risk':['badge-warning','At Risk'],'critical':['badge-critical','Critical'],'active':['badge-stable','Active'],'refill-due':['badge-warning','Refill Due'],'inactive':['badge-muted','Inactive'] };
     const [cls, label] = map[status] || ['badge-muted', status];
     return '<span class="badge ' + cls + '">' + label + '</span>';
 }
-
 function avatarEl(initials, size) {
     size = size || 40;
-    return '<div class="doc-avatar" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size*0.38) + 'px">' + initials + '</div>';
+    return '<div class="doc-avatar" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size*0.38) + 'px">' + (initials||'?') + '</div>';
 }
+function loading() { return '<div class="doc-page"><p class="empty-msg" style="padding:40px;text-align:center">Loading...</p></div>'; }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 
 async function renderDoctorDashboard() {
-    const user    = getUser();
-    const dateStr = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    document.getElementById('desktop-content').innerHTML = loading();
+    const user     = getUser();
     const patients = await apiGetPatients().catch(() => []);
+    const dateStr  = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    const totalMeds = patients.reduce(function(s,p){ return s + (p.medications||[]).length; }, 0);
+
+    // Next upcoming appointment across all patients
+    let nextApt = null;
+    for (const p of patients) {
+        const apts = await apiGetAppointments(p.id).catch(() => []);
+        apts.forEach(function(a) {
+            const d = new Date(a.date + 'T' + (a.time||'00:00:00'));
+            if (d >= new Date() && (!nextApt || d < new Date(nextApt.date + 'T' + nextApt.time))) {
+                nextApt = Object.assign({}, a, { patientName: p.name + ' ' + p.surname });
+            }
+        });
+    }
+
+    const rowsHtml = patients.slice(0,5).map(function(p) {
+        return '<tr class="patient-row" onclick="showDoctorPage(\'patients\')">' +
+            '<td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 36) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td>' +
+            '<td>' + (p.condition || '—') + '</td>' +
+            '<td>' + (p.medications||[]).length + ' meds</td>' +
+        '</tr>';
+    }).join('');
 
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page">' +
             '<div class="doc-page-header"><div>' +
-                '<h1 class="doc-title">Good morning, ' + user.name + ' ' + user.surname + '!</h1>' +
+                '<h1 class="doc-title">Good morning, Dr. ' + user.surname + '!</h1>' +
                 '<p class="doc-subtitle">' + dateStr + '</p>' +
             '</div></div>' +
+
             '<div class="kpi-grid">' +
                 '<div class="kpi-card"><div class="kpi-icon" style="background:#e0f2f7">👥</div><div><p class="kpi-label">Total Patients</p><p class="kpi-value">' + patients.length + '</p></div></div>' +
-                '<div class="kpi-card"><div class="kpi-icon" style="background:#d1fae5">💊</div><div><p class="kpi-label">Total Medications</p><p class="kpi-value">' + patients.reduce(function(s,p){ return s + (p.medications||[]).length; }, 0) + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#d1fae5">💊</div><div><p class="kpi-label">Active Medications</p><p class="kpi-value">' + totalMeds + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7">📅</div><div><p class="kpi-label">Next Appointment</p><p class="kpi-value" style="font-size:16px">' + (nextApt ? nextApt.patientName + '<br><small style="font-size:12px;color:var(--muted-foreground)">' + nextApt.date + '</small>' : '—') + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#ede9fe">📝</div><div><p class="kpi-label">Quick Actions</p><p class="kpi-value" style="font-size:13px"><button class="btn-sm" onclick="showDoctorPage(\'prescriptions\')">New Rx</button></p></div></div>' +
             '</div>' +
+
             '<div class="doc-card">' +
-                '<h2 class="doc-card-title">👥 Your Patients</h2>' +
+                '<div class="doc-card-title-row"><h2 class="doc-card-title">👥 Recent Patients</h2><button class="btn-sm" onclick="showDoctorPage(\'patients\')">View All →</button></div>' +
                 (patients.length === 0
-                    ? '<p class="empty-msg">No patients assigned yet.</p>'
-                    : '<table class="doc-table"><thead><tr><th>Patient</th><th>Condition</th><th>Medications</th><th></th></tr></thead><tbody>' +
-                      patients.map(function(p) {
-                          return '<tr class="patient-row" onclick="viewPatient(' + p.id + ')">' +
-                              '<td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 36) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td>' +
-                              '<td>' + (p.condition || '—') + '</td>' +
-                              '<td>' + (p.medications||[]).length + ' meds</td>' +
-                              '<td><button class="btn-sm" onclick="event.stopPropagation();viewPatient(' + p.id + ')">View</button></td>' +
-                          '</tr>';
-                      }).join('') +
-                      '</tbody></table>'
+                    ? '<p class="empty-msg">No patients yet.</p>'
+                    : '<table class="doc-table"><thead><tr><th>Patient</th><th>Condition</th><th>Medications</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>'
                 ) +
             '</div>' +
         '</div>';
@@ -443,7 +716,7 @@ async function renderDoctorDashboard() {
 // ── PATIENTS ──────────────────────────────────────────────────────────────────
 
 async function renderDoctorPatients() {
-    document.getElementById('desktop-content').innerHTML = '<div class="doc-page"><p class="empty-msg">Loading...</p></div>';
+    document.getElementById('desktop-content').innerHTML = loading();
     const patients = await apiGetPatients().catch(() => []);
 
     document.getElementById('desktop-content').innerHTML =
@@ -454,7 +727,7 @@ async function renderDoctorPatients() {
                 patients.map(function(p) {
                     return '<tr class="patient-row" onclick="viewPatient(' + p.id + ')">' +
                         '<td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 36) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td>' +
-                        '<td>' + (p.condition || '—') + '</td>' +
+                        '<td>' + (p.condition||'—') + '</td>' +
                         '<td>' + p.email + '</td>' +
                         '<td>' + (p.medications||[]).length + ' meds</td>' +
                         '<td><button class="btn-sm" onclick="event.stopPropagation();viewPatient(' + p.id + ')">View</button></td>' +
@@ -466,55 +739,91 @@ async function renderDoctorPatients() {
 }
 
 async function viewPatient(id) {
-    document.getElementById('desktop-content').innerHTML = '<div class="doc-page"><p class="empty-msg">Loading...</p></div>';
+    document.getElementById('desktop-content').innerHTML = loading();
     const p   = await apiGetPatient(id);
     const rxs = await apiGetPrescriptions(id).catch(() => []);
+    const apts = await apiGetAppointments(id).catch(() => []);
 
-    const medsHtml = (p.medications||[]).map(function(m) {
-        return '<div class="rx-row"><div class="rx-icon">' + m.name.charAt(0) + '</div><div class="rx-info"><span class="rx-name">' + m.name + ' <strong>' + m.dose + '</strong></span><span class="rx-freq">' + m.frequency + ' at ' + formatTime(m.time) + '</span></div></div>';
-    }).join('') || '<p class="empty-msg">No medications.</p>';
+    const medsHtml = (p.medications||[]).length === 0
+        ? '<p class="empty-msg">No medications.</p>'
+        : (p.medications||[]).map(function(m) {
+            return '<div class="rx-row"><div class="rx-icon">' + m.name.charAt(0) + '</div>' +
+                '<div class="rx-info"><span class="rx-name">' + m.name + ' <strong>' + m.dose + '</strong></span>' +
+                '<span class="rx-freq">' + m.frequency + ' at ' + formatTime(m.time) + '</span></div></div>';
+          }).join('');
 
-    const rxHtml = rxs.map(function(rx) {
-        return '<div class="rx-row"><div class="rx-icon">' + rx.medication.charAt(0) + '</div><div class="rx-info"><span class="rx-name">' + rx.medication + ' <strong>' + rx.dose + '</strong></span><span class="rx-freq">' + rx.frequency + ' · Refill: ' + rx.refill_date + '</span></div>' + statusBadge(rx.status) + '</div>';
-    }).join('') || '<p class="empty-msg">No prescriptions.</p>';
+    const rxHtml = rxs.length === 0
+        ? '<p class="empty-msg">No prescriptions.</p>'
+        : rxs.map(function(rx) {
+            return '<div class="rx-row"><div class="rx-icon">' + rx.medication.charAt(0) + '</div>' +
+                '<div class="rx-info"><span class="rx-name">' + rx.medication + ' <strong>' + rx.dose + '</strong></span>' +
+                '<span class="rx-freq">' + rx.frequency + ' · Refill: ' + rx.refill_date + '</span></div>' +
+                statusBadge(rx.status) + '</div>';
+          }).join('');
+
+    const aptsHtml = apts.length === 0
+        ? '<p class="empty-msg">No appointments.</p>'
+        : apts.map(function(a) {
+            return '<div class="rx-row"><div class="rx-icon">📅</div>' +
+                '<div class="rx-info"><span class="rx-name">' + a.title + '</span>' +
+                '<span class="rx-freq">' + a.date + ' at ' + formatTime(a.time) + '</span></div></div>';
+          }).join('');
 
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page">' +
             '<div class="doc-page-header"><button class="btn-back" onclick="renderDoctorPatients()">← Back to Patients</button></div>' +
             '<div class="doc-card patient-detail-header">' + avatarEl(p.name[0]+p.surname[0], 60) +
-                '<div class="pdh-info"><h2 class="doc-title" style="margin:0">' + p.name + ' ' + p.surname + '</h2><p class="doc-subtitle">' + p.email + '</p><p class="doc-subtitle">' + (p.condition||'No condition listed') + '</p></div>' +
+                '<div class="pdh-info">' +
+                    '<h2 class="doc-title" style="margin:0">' + p.name + ' ' + p.surname + '</h2>' +
+                    '<p class="doc-subtitle">' + p.email + '</p>' +
+                    '<p class="doc-subtitle" style="margin-top:4px">🩺 ' + (p.condition||'No condition listed') + '</p>' +
+                '</div>' +
+                '<button class="btn-sm" style="margin-left:auto;align-self:flex-start" onclick="openMessagePatient(' + p.user_id + ', \'' + p.name + ' ' + p.surname + '\')">💬 Message</button>' +
             '</div>' +
             '<div class="dash-row">' +
                 '<div class="doc-card flex-1"><h2 class="doc-card-title">💊 Medications</h2><div class="rx-list">' + medsHtml + '</div></div>' +
                 '<div class="doc-card flex-1"><div class="doc-card-title-row"><h2 class="doc-card-title">📝 Prescriptions</h2><button class="btn-sm" onclick="showDoctorPage(\'prescriptions\')">Manage</button></div><div class="rx-list">' + rxHtml + '</div></div>' +
             '</div>' +
+            '<div class="doc-card"><h2 class="doc-card-title">📅 Appointments</h2><div class="rx-list">' + aptsHtml + '</div></div>' +
         '</div>';
 }
 
 // ── PRESCRIPTIONS ─────────────────────────────────────────────────────────────
 
 async function renderDoctorPrescriptions() {
-    document.getElementById('desktop-content').innerHTML = '<div class="doc-page"><p class="empty-msg">Loading...</p></div>';
+    document.getElementById('desktop-content').innerHTML = loading();
     const patients = await apiGetPatients().catch(() => []);
     let allRx = [];
     for (const p of patients) {
         const rxs = await apiGetPrescriptions(p.id).catch(() => []);
-        allRx = allRx.concat(rxs.map(function(r){ r.patientName = p.name + ' ' + p.surname; return r; }));
+        allRx = allRx.concat(rxs.map(function(r){ r._patientName = p.name + ' ' + p.surname; return r; }));
     }
 
     const refillCount  = allRx.filter(function(r){ return r.status === 'refill-due'; }).length;
-    const refillBanner = refillCount > 0 ? '<div class="doc-alert alert-warning" style="margin-bottom:20px"><span class="alert-icon">⚠️</span><span class="alert-msg">' + refillCount + ' prescription(s) require renewal.</span></div>' : '';
-    const patientOpts  = patients.map(function(p){ return '<option value="' + p.id + '">' + p.name + ' ' + p.surname + '</option>'; }).join('');
+    const refillBanner = refillCount > 0
+        ? '<div class="doc-alert alert-warning" style="margin-bottom:20px"><span class="alert-icon">⚠️</span><span class="alert-msg">' + refillCount + ' prescription(s) require renewal.</span></div>'
+        : '';
+    const patientOpts = patients.map(function(p){ return '<option value="' + p.id + '">' + p.name + ' ' + p.surname + '</option>'; }).join('');
 
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page">' +
             '<div class="doc-page-header"><h1 class="doc-title">Prescriptions</h1><button class="btn-primary" onclick="openNewRxModal()">+ New Prescription</button></div>' +
             refillBanner +
-            '<div class="doc-card" style="padding:0;overflow:hidden"><table class="doc-table"><thead><tr><th>Patient</th><th>Medication</th><th>Dose</th><th>Frequency</th><th>Start</th><th>Refill</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
-            allRx.map(function(rx){
-                return '<tr><td>' + rx.patientName + '</td><td><strong>' + rx.medication + '</strong></td><td>' + rx.dose + '</td><td>' + rx.frequency + '</td><td>' + rx.start_date + '</td><td>' + rx.refill_date + '</td><td>' + statusBadge(rx.status) + '</td><td><div style="display:flex;gap:6px"><button class="btn-sm" onclick="renewPrescription(' + rx.id + ')">Renew</button><button class="btn-sm btn-sm-danger" onclick="stopPrescription(' + rx.id + ')">Stop</button></div></td></tr>';
-            }).join('') +
-            '</tbody></table></div>' +
+            '<div class="doc-card" style="padding:0;overflow:hidden"><table class="doc-table">' +
+                '<thead><tr><th>Patient</th><th>Medication</th><th>Dose</th><th>Frequency</th><th>Start</th><th>Refill</th><th>Status</th><th>Actions</th></tr></thead>' +
+                '<tbody>' + allRx.map(function(rx) {
+                    return '<tr>' +
+                        '<td>' + rx._patientName + '</td>' +
+                        '<td><strong>' + rx.medication + '</strong></td>' +
+                        '<td>' + rx.dose + '</td>' +
+                        '<td>' + rx.frequency + '</td>' +
+                        '<td>' + rx.start_date + '</td>' +
+                        '<td>' + rx.refill_date + '</td>' +
+                        '<td>' + statusBadge(rx.status) + '</td>' +
+                        '<td><div style="display:flex;gap:6px"><button class="btn-sm" onclick="renewPrescription(' + rx.id + ')">Renew</button><button class="btn-sm btn-sm-danger" onclick="stopPrescription(' + rx.id + ')">Stop</button></div></td>' +
+                    '</tr>';
+                }).join('') + '</tbody>' +
+            '</table></div>' +
         '</div>' +
         '<div id="rx-modal" class="modal-overlay hidden"><div class="modal" style="max-width:500px">' +
             '<h2 class="modal-title">New Prescription</h2>' +
@@ -536,19 +845,16 @@ async function saveNewRx() {
     const medication = document.getElementById('rx-med').value.trim();
     const dose       = document.getElementById('rx-dose').value.trim();
     const frequency  = document.getElementById('rx-freq').value;
-    const doctor     = getUser();
     if (!medication || !dose) { alert('Please fill in medication and dose.'); return; }
-    await apiAddPrescription({ patient_id: patientId, doctor_id: doctor.id, medication, dose, frequency });
+    await apiAddPrescription({ patient_id: patientId, doctor_id: getUser().id, medication, dose, frequency });
     closeRxModal();
     renderDoctorPrescriptions();
 }
-
 async function renewPrescription(id) {
     const refill = new Date(); refill.setMonth(refill.getMonth()+3);
     await apiUpdatePrescription(id, { status:'active', refill_date: refill.toISOString().split('T')[0] });
     renderDoctorPrescriptions();
 }
-
 async function stopPrescription(id) {
     if (!confirm('Stop this prescription?')) return;
     await apiDeletePrescription(id);
@@ -558,22 +864,36 @@ async function stopPrescription(id) {
 // ── REPORTS ───────────────────────────────────────────────────────────────────
 
 async function renderDoctorReports() {
-    document.getElementById('desktop-content').innerHTML = '<div class="doc-page"><p class="empty-msg">Loading...</p></div>';
-    const patients = await apiGetPatients().catch(() => []);
+    document.getElementById('desktop-content').innerHTML = loading();
+    const patients  = await apiGetPatients().catch(() => []);
     const totalMeds = patients.reduce(function(s,p){ return s + (p.medications||[]).length; }, 0);
+
+    let allRx = [];
+    for (const p of patients) {
+        const rxs = await apiGetPrescriptions(p.id).catch(() => []);
+        allRx = allRx.concat(rxs);
+    }
+    const refillsDue = allRx.filter(function(r){ return r.status === 'refill-due'; }).length;
 
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page">' +
-            '<div class="doc-page-header"><h1 class="doc-title">Reports</h1><button class="btn-primary">Export PDF</button></div>' +
+            '<div class="doc-page-header"><h1 class="doc-title">Reports</h1></div>' +
             '<div class="kpi-grid">' +
                 '<div class="kpi-card"><div class="kpi-icon" style="background:#e0f2f7">👥</div><div><p class="kpi-label">Total Patients</p><p class="kpi-value">' + patients.length + '</p></div></div>' +
-                '<div class="kpi-card"><div class="kpi-icon" style="background:#d1fae5">💊</div><div><p class="kpi-label">Total Medications</p><p class="kpi-value">' + totalMeds + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#d1fae5">💊</div><div><p class="kpi-label">Active Medications</p><p class="kpi-value">' + totalMeds + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7">📝</div><div><p class="kpi-label">Total Prescriptions</p><p class="kpi-value">' + allRx.length + '</p></div></div>' +
+                '<div class="kpi-card"><div class="kpi-icon" style="background:#fee2e2">⚠️</div><div><p class="kpi-label">Refills Due</p><p class="kpi-value" style="color:var(--destructive)">' + refillsDue + '</p></div></div>' +
             '</div>' +
             '<div class="doc-card" style="padding:0;overflow:hidden">' +
-                '<div style="padding:16px 20px 0"><h2 class="doc-card-title">Patient Breakdown</h2></div>' +
+                '<div style="padding:16px 20px"><h2 class="doc-card-title">Patient Overview</h2></div>' +
                 '<table class="doc-table"><thead><tr><th>Patient</th><th>Condition</th><th>Medications</th><th>Email</th></tr></thead><tbody>' +
-                patients.map(function(p){
-                    return '<tr><td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 32) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td><td>' + (p.condition||'—') + '</td><td>' + (p.medications||[]).length + '</td><td>' + p.email + '</td></tr>';
+                patients.map(function(p) {
+                    return '<tr onclick="viewPatient(' + p.id + ')" class="patient-row">' +
+                        '<td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 32) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td>' +
+                        '<td>' + (p.condition||'—') + '</td>' +
+                        '<td>' + (p.medications||[]).length + '</td>' +
+                        '<td>' + p.email + '</td>' +
+                    '</tr>';
                 }).join('') +
                 '</tbody></table>' +
             '</div>' +
@@ -585,12 +905,13 @@ async function renderDoctorReports() {
 let activeReceiverId = null;
 
 async function renderDoctorMessages(receiverId) {
+    document.getElementById('desktop-content').innerHTML = loading();
     const threads = await apiGetThreads().catch(() => []);
     const userId  = getUser().id;
 
     const threadMap = {};
     threads.forEach(function(m) {
-        const otherId   = m.sender_id === userId ? m.receiver_id : m.sender_id;
+        const otherId   = m.sender_id === userId ? m.receiver_id   : m.sender_id;
         const otherName = m.sender_id === userId
             ? (m.receiver_name + ' ' + m.receiver_surname)
             : (m.sender_name  + ' ' + m.sender_surname);
@@ -599,61 +920,71 @@ async function renderDoctorMessages(receiverId) {
         if (!m.is_read && m.sender_id !== userId) threadMap[otherId].unread = true;
     });
 
-    if (!receiverId) {
-        const keys = Object.keys(threadMap);
-        receiverId = keys.length ? parseInt(keys[0]) : null;
-    }
+    const keys = Object.keys(threadMap);
+    if (!receiverId && keys.length) receiverId = parseInt(keys[0]);
     activeReceiverId = receiverId;
 
-    const listHtml = Object.values(threadMap).map(function(t) {
-        const last = t.messages[t.messages.length-1];
-        return '<div class="msg-thread-item ' + (t.id === receiverId ? 'active' : '') + ' ' + (t.unread ? 'unread' : '') + '" onclick="renderDoctorMessages(' + t.id + ')">' +
-            avatarEl(t.name.split(' ').map(function(w){return w[0];}).join(''), 40) +
-            '<div class="msg-thread-info"><div class="msg-thread-top"><span class="msg-thread-name">' + t.name + '</span></div>' +
-            '<span class="msg-thread-preview">' + last.body + '</span></div>' +
-            (t.unread ? '<span class="unread-dot"></span>' : '') +
-        '</div>';
-    }).join('') || '<p class="empty-msg" style="padding:16px">No messages yet.</p>';
+    const listHtml = keys.length === 0
+        ? '<p style="padding:16px;color:var(--muted-foreground)">No messages yet.</p>'
+        : keys.map(function(k) {
+            const t    = threadMap[k];
+            const last = t.messages[t.messages.length-1];
+            return '<div class="msg-thread-item' + (t.id === receiverId ? ' active' : '') + (t.unread ? ' unread' : '') + '" onclick="renderDoctorMessages(' + t.id + ')">' +
+                avatarEl(t.name.split(' ').map(function(w){return w[0];}).join(''), 40) +
+                '<div class="msg-thread-info"><div class="msg-thread-top"><span class="msg-thread-name">' + t.name + '</span></div>' +
+                '<span class="msg-thread-preview">' + last.body.substring(0,50) + (last.body.length>50?'…':'') + '</span></div>' +
+                (t.unread ? '<span class="unread-dot"></span>' : '') +
+            '</div>';
+          }).join('');
 
     const activeThread = receiverId ? threadMap[receiverId] : null;
     const bubblesHtml  = activeThread
         ? activeThread.messages.map(function(m) {
-            return '<div class="msg-bubble-wrap ' + (m.sender_id === userId ? 'bubble-right' : 'bubble-left') + '">' +
-                '<div class="msg-bubble ' + (m.sender_id === userId ? 'bubble-doc' : 'bubble-patient') + '">' +
-                '<p>' + m.body + '</p><span class="bubble-time">' + m.sent_at + '</span></div></div>';
+            const mine = m.sender_id === userId;
+            return '<div class="msg-bubble-wrap ' + (mine?'bubble-right':'bubble-left') + '">' +
+                '<div class="msg-bubble ' + (mine?'bubble-doc':'bubble-patient') + '">' +
+                '<p>' + m.body + '</p>' +
+                '<span class="bubble-time">' + new Date(m.sent_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</span>' +
+                '</div></div>';
           }).join('')
-        : '<p class="empty-msg" style="padding:20px">Select a conversation.</p>';
+        : '<p style="padding:20px;color:var(--muted-foreground);text-align:center">Select a conversation.</p>';
 
-    const threadHeader = activeThread
-        ? '<div class="msg-chat-header">' + avatarEl(activeThread.name.split(' ').map(function(w){return w[0];}).join(''), 40) + '<div><span class="msg-chat-name">' + activeThread.name + '</span></div></div>'
+    const chatHeader = activeThread
+        ? '<div class="msg-chat-header">' + avatarEl(activeThread.name.split(' ').map(function(w){return w[0];}).join(''), 40) +
+          '<div><span class="msg-chat-name">' + activeThread.name + '</span></div></div>'
         : '';
 
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page" style="height:calc(100vh - 120px);display:flex;flex-direction:column">' +
             '<div class="doc-page-header" style="flex-shrink:0"><h1 class="doc-title">Messages</h1></div>' +
-            '<div class="msg-layout">' +
-                '<div class="msg-sidebar">' +
-                    '<div class="msg-search-wrap"><input class="msg-search" placeholder="🔍 Search..."></div>' +
-                    '<div class="msg-thread-list">' + listHtml + '</div>' +
-                '</div>' +
+            '<div class="msg-layout" style="flex:1;min-height:0">' +
+                '<div class="msg-sidebar"><div class="msg-thread-list">' + listHtml + '</div></div>' +
                 '<div class="msg-chat">' +
-                    threadHeader +
-                    '<div class="msg-chat-body">' + bubblesHtml + '</div>' +
-                    '<div class="msg-input-row"><input id="msg-input" class="msg-input" placeholder="Type a message..." onkeydown="if(event.key===\'Enter\')sendMessage()"><button class="btn-primary" onclick="sendMessage()">Send</button></div>' +
+                    chatHeader +
+                    '<div class="msg-chat-body" id="doc-chat-body">' + bubblesHtml + '</div>' +
+                    '<div class="msg-input-row">' +
+                        '<input id="msg-input" class="msg-input" placeholder="Type a message..." onkeydown="if(event.key===\'Enter\')sendDoctorMessage()">' +
+                        '<button class="btn-primary" onclick="sendDoctorMessage()">Send</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</div>';
 
-    setTimeout(function() { const b = document.querySelector('.msg-chat-body'); if (b) b.scrollTop = b.scrollHeight; }, 50);
+    setTimeout(function() { const b = document.getElementById('doc-chat-body'); if (b) b.scrollTop = b.scrollHeight; }, 50);
 }
 
-async function sendMessage() {
+async function sendDoctorMessage() {
     const input = document.getElementById('msg-input');
-    const text  = input.value.trim();
+    const text  = input ? input.value.trim() : '';
     if (!text || !activeReceiverId) return;
     await apiSendMessage(getUser().id, activeReceiverId, text);
     input.value = '';
     renderDoctorMessages(activeReceiverId);
+}
+
+function openMessagePatient(userId, name) {
+    activeReceiverId = userId;
+    showDoctorPage('messages');
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
@@ -666,33 +997,21 @@ function renderDoctorSettings() {
             '<div class="doc-card">' +
                 '<h2 class="doc-card-title">👤 Profile</h2>' +
                 '<div class="settings-profile">' + avatarEl(user.name[0]+user.surname[0], 64) +
-                    '<div><p style="font-weight:600;font-size:18px">' + user.name + ' ' + user.surname + '</p><p style="color:var(--muted-foreground)">Doctor</p></div>' +
+                    '<div><p style="font-weight:600;font-size:18px">Dr. ' + user.name + ' ' + user.surname + '</p><p style="color:var(--muted-foreground)">Doctor</p></div>' +
                 '</div>' +
-                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">' +
-                    '<div class="form-group"><label class="form-label">First Name</label><input class="form-input" value="' + user.name + '"></div>' +
-                    '<div class="form-group"><label class="form-label">Last Name</label><input class="form-input" value="' + user.surname + '"></div>' +
-                '</div>' +
-                '<button class="btn-primary" style="margin-top:8px">Save Profile</button>' +
             '</div>' +
             '<div class="doc-card">' +
                 '<h2 class="doc-card-title">🔔 Notifications</h2>' +
                 '<div class="settings-list">' +
-                [['Low Adherence Alerts','Alert when a patient drops below 70%',true],
-                 ['Missed Dose Alerts','Alert when patient misses 2+ doses',true],
-                 ['Refill Reminders','Remind when prescriptions are due',true],
+                [['Refill Reminders','Remind when prescriptions are due',true],
                  ['New Patient Messages','Notify on incoming messages',true],
                  ['Weekly Summary Report','Email summary every Monday',false]
                 ].map(function(s){ return '<div class="setting-item"><div class="setting-info"><p class="setting-label">' + s[0] + '</p><p class="setting-desc">' + s[1] + '</p></div><label class="toggle"><input type="checkbox"' + (s[2]?' checked':'') + '><span class="toggle-slider"></span></label></div>'; }).join('') +
                 '</div>' +
             '</div>' +
             '<div class="doc-card">' +
-                '<h2 class="doc-card-title">🔒 Security</h2>' +
-                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
-                    '<div class="form-group"><label class="form-label">Current Password</label><input class="form-input" type="password" placeholder="••••••••"></div><div></div>' +
-                    '<div class="form-group"><label class="form-label">New Password</label><input class="form-input" type="password" placeholder="••••••••"></div>' +
-                    '<div class="form-group"><label class="form-label">Confirm Password</label><input class="form-input" type="password" placeholder="••••••••"></div>' +
-                '</div>' +
-                '<button class="btn-primary" style="margin-top:8px">Update Password</button>' +
+                '<h2 class="doc-card-title">🔒 Account</h2>' +
+                '<button class="btn-delete" style="margin-top:8px;padding:10px 20px" onclick="handleLogout()">Sign Out</button>' +
             '</div>' +
         '</div>';
 }

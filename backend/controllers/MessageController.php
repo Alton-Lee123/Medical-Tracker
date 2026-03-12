@@ -7,33 +7,36 @@ class MessageController {
         $this->db = $db;
     }
 
-    public function getThreads() {
-        // For now return all messages — will scope to logged-in user once middleware is added
+    // Get all threads for the logged-in user only
+    public function getThreads($userId) {
         $stmt = $this->db->prepare('
             SELECT
-                m.id, m.body, m.sent_at, m.is_read,
-                s.name AS sender_name, s.surname AS sender_surname, s.role AS sender_role,
+                m.id, m.sender_id, m.receiver_id, m.body, m.sent_at, m.is_read,
+                s.name AS sender_name,   s.surname AS sender_surname,
                 r.name AS receiver_name, r.surname AS receiver_surname
             FROM messages m
             JOIN users s ON s.id = m.sender_id
             JOIN users r ON r.id = m.receiver_id
-            ORDER BY m.sent_at DESC
-        ');
-        $stmt->execute();
-        echo json_encode($stmt->fetchAll());
-    }
-
-    public function getThread($userId) {
-        $stmt = $this->db->prepare('
-            SELECT
-                m.id, m.body, m.sent_at, m.is_read, m.sender_id, m.receiver_id,
-                s.name AS sender_name, s.surname AS sender_surname
-            FROM messages m
-            JOIN users s ON s.id = m.sender_id
-            WHERE (m.sender_id = ? OR m.receiver_id = ?)
+            WHERE m.sender_id = ? OR m.receiver_id = ?
             ORDER BY m.sent_at ASC
         ');
         $stmt->execute([$userId, $userId]);
+        echo json_encode($stmt->fetchAll());
+    }
+
+    // Get a single thread between the logged-in user and another user
+    public function getThread($userId, $otherId) {
+        $stmt = $this->db->prepare('
+            SELECT
+                m.id, m.sender_id, m.receiver_id, m.body, m.sent_at, m.is_read,
+                s.name AS sender_name, s.surname AS sender_surname
+            FROM messages m
+            JOIN users s ON s.id = m.sender_id
+            WHERE (m.sender_id = ? AND m.receiver_id = ?)
+               OR (m.sender_id = ? AND m.receiver_id = ?)
+            ORDER BY m.sent_at ASC
+        ');
+        $stmt->execute([$userId, $otherId, $otherId, $userId]);
         echo json_encode($stmt->fetchAll());
     }
 

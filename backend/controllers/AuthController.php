@@ -103,7 +103,7 @@ class AuthController {
         return null;
     }
 
-    private function ensureTokensTable() {
+        private function ensureTokensTable() {
         $this->db->exec('
             CREATE TABLE IF NOT EXISTS tokens (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -115,3 +115,4 @@ class AuthController {
         ');
     }
 }
+

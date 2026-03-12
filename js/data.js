@@ -5,7 +5,6 @@ let appData = {
     patientId:    null,
     medications:  [],
     taken:        [],
-    refills:      [],
     appointments: []
 };
 
@@ -17,14 +16,10 @@ async function initAppData() {
 
     try {
         if (user.role === 'patient') {
-            // Look up patient record by user_id
-            const patient = await apiGetPatient(user.id);
-
-            appData.patientId   = patient.id;
-            appData.medications = patient.medications || [];
-
-            const appointments   = await apiGetAppointments(patient.id);
-            appData.appointments = appointments || [];
+            const patient        = await apiGetPatient(user.id);
+            appData.patientId    = patient.id;
+            appData.medications  = patient.medications || [];
+            appData.appointments = await apiGetAppointments(patient.id).catch(() => []);
 
             // Build taken records from medication logs
             appData.taken = [];
@@ -40,8 +35,11 @@ async function initAppData() {
                 });
             }
 
-            // Reload the dashboard now that data is ready
             loadPatientDashboard();
+
+        } else if (user.role === 'doctor') {
+            // Doctor data is loaded on demand per page, nothing to pre-load
+            showDoctorPage('dashboard');
         }
     } catch (err) {
         console.error('Failed to load app data:', err.message);
@@ -50,9 +48,7 @@ async function initAppData() {
 
 function isTakenToday(medId) {
     const today = new Date().toISOString().split('T')[0];
-    return appData.taken.some(function(record) {
-        return record.visaId === medId && record.date === today;
-    });
+    return appData.taken.some(function(r) { return r.visaId === medId && r.date === today; });
 }
 
 async function recordTaken(medId) {
@@ -60,7 +56,7 @@ async function recordTaken(medId) {
         await apiLogTaken(medId);
         const now = new Date();
         appData.taken.push({
-            id:     appData.taken.length + 1,
+            id:     Date.now(),
             visaId: medId,
             date:   now.toISOString().split('T')[0],
             time:   now.toTimeString().split(' ')[0]
@@ -71,34 +67,23 @@ async function recordTaken(medId) {
 }
 
 function getTakenForDate(dateStr) {
-    return appData.taken.filter(function(record) {
-        return record.date === dateStr;
-    });
+    return appData.taken.filter(function(r) { return r.date === dateStr; });
 }
 
 function calculateAdherence(startDate, endDate) {
-    let totalDoses = 0;
-    let takenDoses = 0;
-
-    let current = new Date(startDate);
-    const end   = new Date(endDate);
-
-    while (current <= end) {
-        const dateStr    = current.toISOString().split('T')[0];
+    let total = 0, taken = 0;
+    const cur = new Date(startDate);
+    const end = new Date(endDate);
+    while (cur <= end) {
+        const dateStr    = formatDateStr(cur);
         const takenToday = getTakenForDate(dateStr);
-
         appData.medications.forEach(function(med) {
-            totalDoses++;
-            if (takenToday.some(function(t) { return t.visaId === med.id; })) {
-                takenDoses++;
-            }
+            total++;
+            if (takenToday.some(function(t) { return t.visaId === med.id; })) taken++;
         });
-
-        current.setDate(current.getDate() + 1);
+        cur.setDate(cur.getDate() + 1);
     }
-
-    if (totalDoses === 0) return 0;
-    return Math.round((takenDoses / totalDoses) * 100);
+    return total === 0 ? 0 : Math.round((taken / total) * 100);
 }
 
 function saveData() {}

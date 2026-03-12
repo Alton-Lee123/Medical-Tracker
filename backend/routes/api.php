@@ -24,24 +24,18 @@ switch ($resource) {
         break;
 
     case 'patients':
-        if      ($method === 'GET'  && !$subresource)  $patient->getAll();
-        elseif  ($method === 'GET'  &&  $subresource)  $patient->getOne($subresource);
+        if      ($method === 'GET' && !$subresource) $patient->getAll();
+        elseif  ($method === 'GET' &&  $subresource) $patient->getOne($subresource);
         else    http_response_code(404);
         break;
 
     case 'medications':
-        // /api/medications/{patientId}
-        if      ($method === 'GET'    &&  $subresource && !$action) $medication->getAll($subresource);
-        // /api/medications
-        elseif  ($method === 'POST'   && !$subresource)             $medication->add($body);
-        // /api/medications/{id}/update
-        elseif  ($method === 'PUT'    &&  $subresource)             $medication->update($subresource, $body);
-        // /api/medications/{id}/delete
-        elseif  ($method === 'DELETE' &&  $subresource)             $medication->delete($subresource);
-        // /api/medications/{id}/taken
-        elseif  ($method === 'POST'   &&  $subresource && $action === 'taken') $medication->logTaken($subresource);
-        // /api/medications/{id}/logs
-        elseif  ($method === 'GET'    &&  $subresource && $action === 'logs')  $medication->getLogs($subresource);
+        if      ($method === 'GET'    &&  $subresource && !$action)              $medication->getAll($subresource);
+        elseif  ($method === 'POST'   && !$subresource)                          $medication->add($body);
+        elseif  ($method === 'PUT'    &&  $subresource)                          $medication->update($subresource, $body);
+        elseif  ($method === 'DELETE' &&  $subresource)                          $medication->delete($subresource);
+        elseif  ($method === 'POST'   &&  $subresource && $action === 'taken')   $medication->logTaken($subresource);
+        elseif  ($method === 'GET'    &&  $subresource && $action === 'logs')    $medication->getLogs($subresource);
         else    http_response_code(404);
         break;
 
@@ -62,10 +56,14 @@ switch ($resource) {
         break;
 
     case 'messages':
-        if      ($method === 'GET'   && !$subresource)               $message->getThreads();
-        elseif  ($method === 'GET'   &&  $subresource)               $message->getThread($subresource);
-        elseif  ($method === 'POST'  && !$subresource)               $message->send($body);
-        elseif  ($method === 'PATCH' &&  $subresource && $action === 'read') $message->markRead($subresource);
+        // GET /api/messages           → all threads for logged-in user
+        if      ($method === 'GET'   && !$subresource)                           $message->getThreads($loggedInUserId);
+        // GET /api/messages/{userId} → single thread with that user
+        elseif  ($method === 'GET'   &&  $subresource)                           $message->getThread($loggedInUserId, $subresource);
+        // POST /api/messages          → send a message
+        elseif  ($method === 'POST'  && !$subresource)                           $message->send($body);
+        // PATCH /api/messages/{id}/read → mark as read
+        elseif  ($method === 'PATCH' &&  $subresource && $action === 'read')     $message->markRead($subresource);
         else    http_response_code(404);
         break;
 
