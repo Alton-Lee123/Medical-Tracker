@@ -160,6 +160,8 @@ function updateAdherenceRate() {
 }
 
 function loadMedications() {
+    console.log('appData.medications:', appData.medications);
+    console.log('el:', document.getElementById('medications-list'));
     const el = document.getElementById('medications-list');
     if (!el) return;
     el.innerHTML = '';

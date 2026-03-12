@@ -27,15 +27,14 @@ class PrescriptionController {
             return;
         }
 
-        // Accept either doctor_id (doctors.id) or doctor_user_id (users.id) and resolve to doctors.id
+        // Resolve doctor_id — accept either doctors.id or users.id
+        $doctor = null;
         if (!empty($body['doctor_id'])) {
-            // Check if it's a doctors.id directly
             $stmt = $this->db->prepare('SELECT id FROM doctors WHERE id = ?');
             $stmt->execute([$body['doctor_id']]);
             $doctor = $stmt->fetch();
 
             if (!$doctor) {
-                // Try treating it as a users.id instead
                 $stmt = $this->db->prepare('SELECT id FROM doctors WHERE user_id = ?');
                 $stmt->execute([$body['doctor_id']]);
                 $doctor = $stmt->fetch();
@@ -48,16 +47,26 @@ class PrescriptionController {
             return;
         }
 
-        $doctorId = $doctor['id'];
-        $today    = date('Y-m-d');
-        $refill   = date('Y-m-d', strtotime('+3 months'));
+        $doctorId  = $doctor['id'];
+        $patientId = $body['patient_id'];
+        $today     = date('Y-m-d');
+        $refill    = date('Y-m-d', strtotime('+3 months'));
 
+        $timeMap = [
+            'Once daily'        => '08:00:00',
+            'Twice daily'       => '08:00:00',
+            'Three times daily' => '08:00:00',
+            'As needed'         => '08:00:00',
+        ];
+        $medTime = $body['time'] ?? ($timeMap[$body['frequency']] ?? '08:00:00');
+
+        // Insert into prescriptions table
         $stmt = $this->db->prepare('
             INSERT INTO prescriptions (patient_id, doctor_id, medication, dose, frequency, start_date, refill_date, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ');
         $stmt->execute([
-            $body['patient_id'],
+            $patientId,
             $doctorId,
             $body['medication'],
             $body['dose'],
@@ -66,16 +75,37 @@ class PrescriptionController {
             $body['refill_date'] ?? $refill,
             $body['status']     ?? 'active'
         ]);
+        $prescriptionId = $this->db->lastInsertId();
+
+        // Auto-create matching medication so it appears in patient mark-as-taken list
+        // Avoid duplicates
+        $stmt = $this->db->prepare('
+            SELECT id FROM medications
+            WHERE patient_id = ? AND name = ? AND dose = ? AND frequency = ?
+        ');
+        $stmt->execute([$patientId, $body['medication'], $body['dose'], $body['frequency']]);
+        $existing = $stmt->fetch();
+
+        if (!$existing) {
+            $stmt = $this->db->prepare('
+                INSERT INTO medications (patient_id, name, dose, frequency, time)
+                VALUES (?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([$patientId, $body['medication'], $body['dose'], $body['frequency'], $medTime]);
+            $medicationId = $this->db->lastInsertId();
+        } else {
+            $medicationId = $existing['id'];
+        }
 
         http_response_code(201);
         echo json_encode([
-            'message' => 'Prescription created',
-            'id'      => $this->db->lastInsertId()
+            'message'       => 'Prescription created',
+            'id'            => $prescriptionId,
+            'medication_id' => $medicationId
         ]);
     }
 
     public function update($id, $body) {
-        // Build update dynamically so partial updates work
         $fields = [];
         $values = [];
 
@@ -98,6 +128,19 @@ class PrescriptionController {
     }
 
     public function delete($id) {
+        // When stopped, also remove the matching medication record
+        $stmt = $this->db->prepare('SELECT medication, dose, frequency, patient_id FROM prescriptions WHERE id = ?');
+        $stmt->execute([$id]);
+        $rx = $stmt->fetch();
+
+        if ($rx) {
+            $stmt = $this->db->prepare('
+                DELETE FROM medications
+                WHERE patient_id = ? AND name = ? AND dose = ? AND frequency = ?
+            ');
+            $stmt->execute([$rx['patient_id'], $rx['medication'], $rx['dose'], $rx['frequency']]);
+        }
+
         $stmt = $this->db->prepare('DELETE FROM prescriptions WHERE id = ?');
         $stmt->execute([$id]);
         echo json_encode(['message' => 'Prescription deleted']);

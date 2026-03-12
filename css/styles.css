@@ -1135,7 +1135,7 @@ body {
 /* Patient name cell */
 .patient-name-cell { display: flex; align-items: center; gap: 10px; }
 .pname { font-weight: 600; display: block; }
-.page  { font-size: 12px; color: var(--muted-foreground); display: block; }
+.doc-table .page  { font-size: 12px; color: var(--muted-foreground); display: block; }
 .condition-text { font-size: 13px; color: var(--muted-foreground); }
 
 /* Adherence bar cell */

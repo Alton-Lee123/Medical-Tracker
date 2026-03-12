@@ -1,11 +1,12 @@
 // MedTrack Data Layer
 
 let appData = {
-    user:         null,
-    patientId:    null,
-    medications:  [],
-    taken:        [],
-    appointments: []
+    user:          null,
+    patientId:     null,
+    medications:   [],
+    prescriptions: [],
+    taken:         [],
+    appointments:  []
 };
 
 async function initAppData() {
@@ -18,8 +19,9 @@ async function initAppData() {
         if (user.role === 'patient') {
             const patient        = await apiGetPatient(user.id);
             appData.patientId    = patient.id;
-            appData.medications  = patient.medications || [];
-            appData.appointments = await apiGetAppointments(patient.id).catch(() => []);
+            appData.medications    = patient.medications || [];
+            appData.appointments   = await apiGetAppointments(patient.id).catch(() => []);
+            appData.prescriptions  = await apiGetPrescriptions(patient.id).catch(() => []);
 
             // Build taken records from medication logs
             appData.taken = [];
