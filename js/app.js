@@ -1,59 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════════════
-//  AUTH
+//  AUTH — login/register handled by auth.js on separate pages
 // ══════════════════════════════════════════════════════════════════════════════
-
-async function handleLogin() {
-    const email    = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const errorEl  = document.getElementById('login-error');
-    errorEl.classList.add('hidden');
-    try {
-        const data = await apiLogin(email, password);
-        document.getElementById('login-screen').classList.add('hidden');
-        switchLayout(data.role);
-        await initAppData();
-    } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
-    }
-}
-
-async function handleRegister() {
-    const name     = document.getElementById('reg-name').value.trim();
-    const surname  = document.getElementById('reg-surname').value.trim();
-    const email    = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const role     = document.getElementById('reg-role').value;
-    const errorEl  = document.getElementById('register-error');
-    errorEl.classList.add('hidden');
-    try {
-        await apiRegister(name, surname, email, password, role);
-        const data = await apiLogin(email, password);
-        document.getElementById('register-screen').classList.add('hidden');
-        switchLayout(data.role);
-        await initAppData();
-    } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
-    }
-}
-
-function showRegister() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('register-screen').classList.remove('hidden');
-}
-function showLogin() {
-    document.getElementById('register-screen').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
-}
 
 window.addEventListener('load', async function() {
     const user = getUser();
-    if (user && getToken()) {
-        document.getElementById('login-screen').classList.add('hidden');
-        switchLayout(user.role);
-        await initAppData();
+    if (!user || !getToken()) {
+        window.location.href = 'login.html';
+        return;
     }
+    switchLayout(user.role);
+    await initAppData();
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -618,7 +574,7 @@ function loadPatientSettings() {
 
 async function handleLogout() {
     await apiLogout().catch(function(){});
-    location.reload();
+    window.location.href = 'login.html';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
