@@ -1299,6 +1299,44 @@ body {
     flex-direction: column;
     flex-shrink: 0;
 }
+
+/* Mobile messages — stack vertically, show thread list full width */
+@media (max-width: 600px) {
+    .msg-layout {
+        flex-direction: column;
+        max-height: calc(100vh - 160px);
+        min-height: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .msg-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 220px;
+        flex-shrink: 0;
+    }
+    .msg-thread-list {
+        max-height: 220px;
+    }
+    .msg-thread-preview {
+        max-width: 100%;
+    }
+    .msg-chat {
+        flex: 1;
+        min-height: 0;
+    }
+    .msg-chat-body {
+        padding: 12px;
+    }
+    .msg-bubble {
+        max-width: 85%;
+    }
+    .msg-input-row {
+        padding: 10px 12px;
+    }
+}
 .msg-search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
 .msg-search {
     width: 100%;
