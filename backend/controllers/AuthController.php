@@ -67,7 +67,7 @@ class AuthController {
         $token = bin2hex(random_bytes(32));
 
         $this->ensureTokensTable();
-
+        
         $stmt = $this->db->prepare('
             INSERT INTO tokens (user_id, token, expires_at)
             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))
