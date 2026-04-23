@@ -581,27 +581,98 @@ async function sendPatientMessage() {
 //  PATIENT — SETTINGS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 
-function loadPatientSettings() {
+async function loadPatientSettings() {
     const container = document.getElementById('patient-settings');
     if (!container) return;
     const user = getUser();
+
+    // Fetch full patient record for profile fields
+    let patient = {};
+    try { patient = await apiGetPatient(user.id); } catch(e) {}
+
+    // Compute age from date_of_birth
+    function calcAge(dob) {
+        if (!dob) return '—';
+        const birth = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age;
+    }
+
+    const age             = calcAge(patient.date_of_birth);
+    const gender          = patient.gender          || '—';
+    const allergies       = patient.allergies       || 'None reported';
+    const injuries        = patient.previous_injuries || 'None reported';
+    const lastVisit       = patient.last_hospital_visit
+        ? new Date(patient.last_hospital_visit).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+        : '—';
+    const condition       = patient.condition       || '—';
+
     container.innerHTML =
         '<div style="padding:16px">' +
             '<h1 class="page-title" style="margin-bottom:16px">Settings</h1>' +
 
+            // ── Profile header card ───────────────────────────────────────────
             '<div class="card" style="margin-bottom:16px">' +
                 '<h2 class="section-title">👤 Profile</h2>' +
-                '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
-                    '<div class="medication-icon" style="width:48px;height:48px;font-size:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:#fff">' +
+                '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">' +
+                    '<div class="medication-icon" style="width:56px;height:56px;font-size:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:#fff;flex-shrink:0">' +
                         user.name.charAt(0) + user.surname.charAt(0) +
                     '</div>' +
                     '<div>' +
-                        '<p style="font-weight:600">' + user.name + ' ' + user.surname + '</p>' +
-                        '<p style="font-size:13px;color:var(--muted-foreground)">Patient</p>' +
+                        '<p style="font-weight:700;font-size:16px">' + user.name + ' ' + user.surname + '</p>' +
+                        '<p style="font-size:13px;color:var(--muted-foreground)">' + user.email + '</p>' +
+                        '<p style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px">Patient</p>' +
                     '</div>' +
                 '</div>' +
+
+                // ── Info grid ─────────────────────────────────────────────────
+                '<div class="profile-info-grid">' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🎂</span>' +
+                        '<div><p class="profile-info-label">Age</p><p class="profile-info-value">' + age + (age !== '—' ? ' yrs' : '') + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">⚧</span>' +
+                        '<div><p class="profile-info-label">Gender</p><p class="profile-info-value">' + gender + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🩺</span>' +
+                        '<div><p class="profile-info-label">Condition</p><p class="profile-info-value">' + condition + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🏥</span>' +
+                        '<div><p class="profile-info-label">Last Hospital Visit</p><p class="profile-info-value">' + lastVisit + '</p></div>' +
+                    '</div>' +
+                '</div>' +
+
+                // ── Allergies ─────────────────────────────────────────────────
+                '<div class="profile-detail-block profile-detail-alert">' +
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+                        '<span style="font-size:18px">⚠️</span>' +
+                        '<p class="profile-info-label" style="margin:0;font-weight:700;color:#b45309">Allergies</p>' +
+                    '</div>' +
+                    '<p class="profile-detail-text">' + allergies + '</p>' +
+                '</div>' +
+
+                // ── Previous Injuries ─────────────────────────────────────────
+                '<div class="profile-detail-block">' +
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+                        '<span style="font-size:18px">🩹</span>' +
+                        '<p class="profile-info-label" style="margin:0;font-weight:700">Previous Injuries</p>' +
+                    '</div>' +
+                    '<p class="profile-detail-text">' + injuries + '</p>' +
+                '</div>' +
+
+                // ── Edit button ───────────────────────────────────────────────
+                '<button class="btn-edit" style="margin-top:16px;width:100%;padding:10px;border-radius:var(--radius)" onclick="openEditProfileModal(' +
+                    JSON.stringify({ dob: patient.date_of_birth||'', gender: patient.gender||'', allergies: patient.allergies||'', injuries: patient.previous_injuries||'', lastVisit: patient.last_hospital_visit||'' }).replace(/"/g,'&quot;') +
+                ')">✏️ Edit Profile Info</button>' +
             '</div>' +
 
+            // ── Notifications card ────────────────────────────────────────────
             '<div class="card" style="margin-bottom:16px">' +
                 '<h2 class="section-title">🔔 Notifications</h2>' +
                 '<div class="settings-list">' +
@@ -611,11 +682,58 @@ function loadPatientSettings() {
                 '</div>' +
             '</div>' +
 
+            // ── Account card ──────────────────────────────────────────────────
             '<div class="card">' +
                 '<h2 class="section-title">🔒 Account</h2>' +
                 '<button class="btn-delete" style="width:100%;padding:12px;margin-top:8px" onclick="handleLogout()">Sign Out</button>' +
             '</div>' +
+
+            // ── Edit profile modal ────────────────────────────────────────────
+            '<div id="edit-profile-modal" class="modal-overlay hidden">' +
+                '<div class="modal" style="max-width:400px">' +
+                    '<h2 class="modal-title">Edit Profile Info</h2>' +
+                    '<div class="form-group"><label class="form-label">Date of Birth</label><input type="date" id="ep-dob" class="form-input"></div>' +
+                    '<div class="form-group"><label class="form-label">Gender</label>' +
+                        '<select id="ep-gender" class="form-input">' +
+                            '<option value="">— Select —</option>' +
+                            '<option value="Male">Male</option>' +
+                            '<option value="Female">Female</option>' +
+                            '<option value="Non-binary">Non-binary</option>' +
+                            '<option value="Prefer not to say">Prefer not to say</option>' +
+                        '</select>' +
+                    '</div>' +
+                    '<div class="form-group"><label class="form-label">Allergies</label><textarea id="ep-allergies" class="form-input" rows="2" placeholder="e.g. Penicillin, Peanuts"></textarea></div>' +
+                    '<div class="form-group"><label class="form-label">Previous Injuries</label><textarea id="ep-injuries" class="form-input" rows="2" placeholder="e.g. Broken arm 2019, Knee surgery 2021"></textarea></div>' +
+                    '<div class="form-group"><label class="form-label">Last Hospital Visit</label><input type="date" id="ep-last-visit" class="form-input"></div>' +
+                    '<div class="modal-buttons">' +
+                        '<button class="btn-add" onclick="saveProfileInfo()">Save Changes</button>' +
+                        '<button class="btn-cancel" onclick="document.getElementById(\'edit-profile-modal\').classList.add(\'hidden\')">Cancel</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
         '</div>';
+}
+
+function openEditProfileModal(data) {
+    document.getElementById('ep-dob').value        = data.dob       || '';
+    document.getElementById('ep-gender').value     = data.gender    || '';
+    document.getElementById('ep-allergies').value  = data.allergies || '';
+    document.getElementById('ep-injuries').value   = data.injuries  || '';
+    document.getElementById('ep-last-visit').value = data.lastVisit || '';
+    document.getElementById('edit-profile-modal').classList.remove('hidden');
+}
+
+async function saveProfileInfo() {
+    const user = getUser();
+    await apiFetch('/patients/' + user.id, 'PUT', {
+        gender:             document.getElementById('ep-gender').value,
+        date_of_birth:      document.getElementById('ep-dob').value        || null,
+        allergies:          document.getElementById('ep-allergies').value.trim(),
+        previous_injuries:  document.getElementById('ep-injuries').value.trim(),
+        last_hospital_visit: document.getElementById('ep-last-visit').value || null
+    }).catch(function(){});
+    document.getElementById('edit-profile-modal').classList.add('hidden');
+    loadPatientSettings();
 }
 
 async function handleLogout() {
@@ -778,9 +896,25 @@ async function viewPatient(id) {
                 '<span class="rx-freq">' + a.date + ' at ' + formatTime(a.time) + '</span></div></div>';
           }).join('');
 
+    // Compute age
+    function calcAgeDoc(dob) {
+        if (!dob) return null;
+        const birth = new Date(dob); const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age;
+    }
+    const age       = calcAgeDoc(p.date_of_birth);
+    const lastVisit = p.last_hospital_visit
+        ? new Date(p.last_hospital_visit).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+        : '—';
+
     document.getElementById('desktop-content').innerHTML =
         '<div class="doc-page">' +
             '<div class="doc-page-header"><button class="btn-back" onclick="renderDoctorPatients()">← Back to Patients</button></div>' +
+
+            // ── Patient header ────────────────────────────────────────────────
             '<div class="doc-card patient-detail-header">' + avatarEl(p.name[0]+p.surname[0], 60) +
                 '<div class="pdh-info">' +
                     '<h2 class="doc-title" style="margin:0">' + p.name + ' ' + p.surname + '</h2>' +
@@ -789,6 +923,41 @@ async function viewPatient(id) {
                 '</div>' +
                 '<button class="btn-sm" style="margin-left:auto;align-self:flex-start" onclick="openMessagePatient(' + p.user_id + ', \'' + p.name + ' ' + p.surname + '\')">💬 Message</button>' +
             '</div>' +
+
+            // ── Profile info card ─────────────────────────────────────────────
+            '<div class="doc-card" style="margin-bottom:16px">' +
+                '<h2 class="doc-card-title">🪪 Patient Profile</h2>' +
+                '<div class="profile-info-grid" style="margin-top:12px">' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🎂</span>' +
+                        '<div><p class="profile-info-label">Age</p><p class="profile-info-value">' + (age !== null ? age + ' yrs' : '—') + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">⚧</span>' +
+                        '<div><p class="profile-info-label">Gender</p><p class="profile-info-value">' + (p.gender||'—') + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🩺</span>' +
+                        '<div><p class="profile-info-label">Condition</p><p class="profile-info-value">' + (p.condition||'—') + '</p></div>' +
+                    '</div>' +
+                    '<div class="profile-info-item">' +
+                        '<span class="profile-info-icon">🏥</span>' +
+                        '<div><p class="profile-info-label">Last Hospital Visit</p><p class="profile-info-value">' + lastVisit + '</p></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">' +
+                    '<div class="profile-detail-block profile-detail-alert">' +
+                        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span>⚠️</span><p class="profile-info-label" style="margin:0;font-weight:700;color:#b45309">Allergies</p></div>' +
+                        '<p class="profile-detail-text">' + (p.allergies||'None reported') + '</p>' +
+                    '</div>' +
+                    '<div class="profile-detail-block">' +
+                        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span>🩹</span><p class="profile-info-label" style="margin:0;font-weight:700">Previous Injuries</p></div>' +
+                        '<p class="profile-detail-text">' + (p.previous_injuries||'None reported') + '</p>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+
+            // ── Meds & Prescriptions ──────────────────────────────────────────
             '<div class="dash-row">' +
                 '<div class="doc-card flex-1"><h2 class="doc-card-title">💊 Medications</h2><div class="rx-list">' + medsHtml + '</div></div>' +
                 '<div class="doc-card flex-1"><div class="doc-card-title-row"><h2 class="doc-card-title">📝 Prescriptions</h2><button class="btn-sm" onclick="showDoctorPage(\'prescriptions\')">Manage</button></div><div class="rx-list">' + rxHtml + '</div></div>' +

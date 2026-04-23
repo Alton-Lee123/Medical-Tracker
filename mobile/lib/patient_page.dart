@@ -39,12 +39,10 @@ class _PatientDashboardPageState extends State<PatientDashboardPage> {
 
   Future<void> _load() async {
     try {
-      final meds = await _api.getMedications(widget.token);
-      if (!mounted) return;
-      setState(() {
-        _meds = meds;
-        _loading = false;
-      });
+      final meds = await _api.getMedications(
+  token: widget.token,
+  userId: widget.userId,
+    );
     } catch (e) {
       if (!mounted) return;
       setState(() {

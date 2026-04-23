@@ -26,6 +26,7 @@ switch ($resource) {
     case 'patients':
         if      ($method === 'GET' && !$subresource) $patient->getAll();
         elseif  ($method === 'GET' &&  $subresource) $patient->getOne($subresource);
+        elseif  ($method === 'PUT' &&  $subresource) $patient->updateProfile($subresource, $body);
         else    http_response_code(404);
         break;
 

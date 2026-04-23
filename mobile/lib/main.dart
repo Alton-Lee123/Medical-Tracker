@@ -109,7 +109,6 @@ class _AuthGateState extends State<AuthGate> {
       return PatientShell(
         name: _name ?? 'User',
         token: _token!,
-        onLogout: _logout,
         userId: _userId!,
         onLogout: _logout,
       );
@@ -126,11 +125,12 @@ class _AuthGateState extends State<AuthGate> {
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.onLoggedIn});
 
-  final Future<void> Function({
-    required String token,
-    required String name,
-    required String role,
-  }) onLoggedIn;
+final Future<void> Function({
+  required String token,
+  required String name,
+  required String role,
+  required int userId,
+}) onLoggedIn;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -197,7 +197,6 @@ class _LoginPageState extends State<LoginPage> {
         token: token,
         name: name,
         role: role,
-          role: role,
           userId: userId,
       );
     } catch (e) {
