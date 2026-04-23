@@ -67,6 +67,34 @@ switch ($resource) {
         else    http_response_code(404);
         break;
 
+    case 'admin':
+            require_once __DIR__ . '/../controllers/AdminController.php';
+        require_once __DIR__ . '/../controllers/MessageController.php';
+
+        $admin = new AdminController($db);
+        $messages = new MessageController($db);
+
+        if ($method === 'GET' && $subresource === 'messages') {
+            $messages->getAllMessages(); // NEW
+        }
+        elseif ($method === 'POST' && $subresource === 'messages') {
+            $messages->sendMessage($body); // NEW
+        }
+        
+        require_once __DIR__ . '/../controllers/AdminController.php';
+        $admin = new AdminController($db);
+        if      ($method === 'GET' && $subresource === 'stats')           $admin->getStats();
+        elseif  ($method === 'GET' && $subresource === 'users')           $admin->getAllUsers();
+        elseif  ($method === 'PUT' && $subresource === 'users' && $action) $admin->updateUser($action, $body);
+        elseif  ($method === 'GET' && $subresource === 'doctors')         $admin->getAllDoctors();
+        elseif  ($method === 'PUT' && $subresource === 'doctors' && $action) $admin->updateDoctor($action, $body);
+        elseif  ($method === 'GET' && $subresource === 'patients')        $admin->getAllPatients();
+        elseif  ($method === 'PUT' && $subresource === 'patients' && $action) $admin->updatePatient($action, $body);
+
+
+        else    http_response_code(404);
+    break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Route not found']);
