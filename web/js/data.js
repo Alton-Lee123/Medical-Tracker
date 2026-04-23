@@ -1,4 +1,3 @@
-// MedTrack Data Layer
 
 let appData = {
     user:          null,
@@ -23,7 +22,6 @@ async function initAppData() {
             appData.appointments   = await apiGetAppointments(patient.id).catch(() => []);
             appData.prescriptions  = await apiGetPrescriptions(patient.id).catch(() => []);
 
-            // Build taken records from medication logs
             appData.taken = [];
             for (const med of appData.medications) {
                 const logs = await apiGetMedicationLogs(med.id);
@@ -40,10 +38,8 @@ async function initAppData() {
             loadPatientDashboard();
 
         } else if (user.role === 'doctor') {
-            // Doctor data is loaded on demand per page, nothing to pre-load
             showDoctorPage('dashboard');
         } else if (user.role === 'admin') {
-            // Admin data is loaded on demand per page
             showAdminPage('dashboard');
         }
     } catch (err) {

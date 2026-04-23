@@ -27,7 +27,6 @@ class PrescriptionController {
             return;
         }
 
-        // Resolve doctor_id — accept either doctors.id or users.id
         $doctor = null;
         if (!empty($body['doctor_id'])) {
             $stmt = $this->db->prepare('SELECT id FROM doctors WHERE id = ?');
@@ -60,7 +59,6 @@ class PrescriptionController {
         ];
         $medTime = $body['time'] ?? ($timeMap[$body['frequency']] ?? '08:00:00');
 
-        // Insert into prescriptions table
         $stmt = $this->db->prepare('
             INSERT INTO prescriptions (patient_id, doctor_id, medication, dose, frequency, start_date, refill_date, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -77,8 +75,7 @@ class PrescriptionController {
         ]);
         $prescriptionId = $this->db->lastInsertId();
 
-        // Auto-create matching medication so it appears in patient mark-as-taken list
-        // Avoid duplicates
+        // get medicin
         $stmt = $this->db->prepare('
             SELECT id FROM medications
             WHERE patient_id = ? AND name = ? AND dose = ? AND frequency = ?
@@ -128,7 +125,7 @@ class PrescriptionController {
     }
 
     public function delete($id) {
-        // When stopped, also remove the matching medication record
+        // remove record when the drug is stopped
         $stmt = $this->db->prepare('SELECT medication, dose, frequency, patient_id FROM prescriptions WHERE id = ?');
         $stmt->execute([$id]);
         $rx = $stmt->fetch();

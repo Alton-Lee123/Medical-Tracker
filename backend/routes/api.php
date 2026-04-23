@@ -57,13 +57,9 @@ switch ($resource) {
         break;
 
     case 'messages':
-        // GET /api/messages           → all threads for logged-in user
         if      ($method === 'GET'   && !$subresource)                           $message->getThreads($loggedInUserId);
-        // GET /api/messages/{userId} → single thread with that user
         elseif  ($method === 'GET'   &&  $subresource)                           $message->getThread($loggedInUserId, $subresource);
-        // POST /api/messages          → send a message
         elseif  ($method === 'POST'  && !$subresource)                           $message->send($body);
-        // PATCH /api/messages/{id}/read → mark as read
         elseif  ($method === 'PATCH' &&  $subresource && $action === 'read')     $message->markRead($subresource);
         else    http_response_code(404);
         break;
@@ -76,10 +72,10 @@ switch ($resource) {
         $messages = new MessageController($db);
 
         if ($method === 'GET' && $subresource === 'messages') {
-            $messages->getAllMessages(); // NEW
+            $messages->getAllMessages(); 
         }
         elseif ($method === 'POST' && $subresource === 'messages') {
-            $messages->sendMessage($body); // NEW
+            $messages->sendMessage($body); 
         }
         
         require_once __DIR__ . '/../controllers/AdminController.php';

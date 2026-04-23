@@ -1,4 +1,3 @@
-// API Base URL
 const API_URL = 'http://localhost/medtrack/backend/api';
 
 function getToken() { return localStorage.getItem('medtrack_token'); }
@@ -34,7 +33,7 @@ async function apiFetch(endpoint, method = 'GET', body = null) {
     return data;
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── auth ──────────────────────────────────────────────────────────────────────
 async function apiRegister(name, surname, email, password, role) {
     return await apiFetch('/auth/register', 'POST', { name, surname, email, password, role });
 }

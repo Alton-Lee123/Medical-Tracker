@@ -389,7 +389,7 @@ async function loadRemindersPage() {
     if (el_td) el_td.textContent = appData.medications.length;
     if (el_tk) el_tk.textContent = getTakenForDate(today).length;
 
-    // Today's medication schedule
+    // todays medication schedule
     const list = document.getElementById('reminders-list');
     if (list) {
         list.innerHTML = '';
@@ -416,7 +416,7 @@ async function loadRemindersPage() {
         }
     }
 
-    // Prescriptions
+    // perscriptions
     const rxList = document.getElementById('prescriptions-list');
     if (rxList && appData.patientId) {
         rxList.innerHTML = '<p style="color:var(--muted-foreground);font-size:13px;padding:8px 0">Loading...</p>';
@@ -489,7 +489,6 @@ async function loadPatientMessages() {
     const threads = await apiGetThreads().catch(() => []);
     const userId  = getUser().id;
 
-    // Group messages by the other person
     const threadMap = {};
     threads.forEach(function(m) {
         const otherId   = m.sender_id === userId ? m.receiver_id   : m.sender_id;
@@ -506,7 +505,6 @@ async function loadPatientMessages() {
 
     const activeThread = patientActiveReceiver ? threadMap[patientActiveReceiver] : null;
 
-    // Thread list
     const listHtml = keys.length === 0
         ? '<p style="padding:16px;color:var(--muted-foreground)">No messages yet.</p>'
         : keys.map(function(k) {
@@ -522,7 +520,6 @@ async function loadPatientMessages() {
             '</div>';
           }).join('');
 
-    // Chat bubbles
     const bubblesHtml = activeThread
         ? activeThread.messages.map(function(m) {
             const mine = m.sender_id === userId;

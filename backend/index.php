@@ -14,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'config/Database.php';
 
-// Parse the URL
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = explode('/', trim($uri, '/'));
 
@@ -30,7 +29,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 $body   = json_decode(file_get_contents('php://input'), true);
 $db     = (new Database())->connect();
 
-// Resolve logged-in user from Bearer token
 $loggedInUserId = null;
 $headers = getallheaders();
 if (!empty($headers['Authorization'])) {

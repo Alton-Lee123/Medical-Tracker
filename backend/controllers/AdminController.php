@@ -7,7 +7,7 @@ class AdminController {
         $this->db = $db;
     }
 
-    // ── Users ─────────────────────────────────────────────────────────────────
+    // ── users ─────────────────────────────────────────────────────────────────
 
     public function getAllUsers() {
         $stmt = $this->db->prepare('
@@ -47,7 +47,7 @@ class AdminController {
         echo json_encode(['message' => 'User deleted']);
     }
 
-    // ── Doctors ───────────────────────────────────────────────────────────────
+    // ── doctors ───────────────────────────────────────────────────────────────
 
     public function getAllDoctors() {
         $stmt = $this->db->prepare('
@@ -77,7 +77,6 @@ class AdminController {
             $stmt->execute($values);
         }
 
-        // Also update user-level fields if provided
         if (!empty($body['user_id']) && (!empty($body['name']) || !empty($body['surname']) || !empty($body['email']))) {
             $uFields = [];
             $uValues = [];
@@ -127,7 +126,6 @@ class AdminController {
             $stmt->execute($values);
         }
 
-        // Also update user-level fields if provided
         if (!empty($body['user_id']) && (!empty($body['name']) || !empty($body['surname']) || !empty($body['email']))) {
             $uFields = [];
             $uValues = [];
@@ -142,7 +140,7 @@ class AdminController {
         echo json_encode(['message' => 'Patient updated']);
     }
 
-    // ── Stats ─────────────────────────────────────────────────────────────────
+    // ── stats ─────────────────────────────────────────────────────────────────
 
     public function getStats() {
         $stats = [];

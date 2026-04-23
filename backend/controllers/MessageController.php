@@ -7,7 +7,7 @@ class MessageController {
         $this->db = $db;
     }
 
-    // Get all threads for the logged-in user only
+    // get threads
     public function getThreads($userId) {
         $stmt = $this->db->prepare('
             SELECT
@@ -24,7 +24,7 @@ class MessageController {
         echo json_encode($stmt->fetchAll());
     }
 
-    // Get a single thread between the logged-in user and another user
+    // get thread singlwe
     public function getThread($userId, $otherId) {
         $stmt = $this->db->prepare('
             SELECT

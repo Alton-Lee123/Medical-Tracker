@@ -23,7 +23,6 @@ class PatientController {
     }
 
     public function getOne($id) {
-        // Support lookup by user_id or patient id
         $stmt = $this->db->prepare('
             SELECT
                 p.id, p.date_of_birth, p.`condition`, p.user_id,
@@ -42,7 +41,6 @@ class PatientController {
             return;
         }
 
-        // Fetch their medications
         $stmt = $this->db->prepare('SELECT * FROM medications WHERE patient_id = ?');
         $stmt->execute([$patient['id']]);
         $patient['medications'] = $stmt->fetchAll();
@@ -51,7 +49,6 @@ class PatientController {
     }
 
     public function updateProfile($id, $body) {
-        // Allow patient to update their own profile fields (looked up by user_id or patient id)
         $stmt = $this->db->prepare('SELECT id FROM patients WHERE id = ? OR user_id = ?');
         $stmt->execute([$id, $id]);
         $row = $stmt->fetch();
