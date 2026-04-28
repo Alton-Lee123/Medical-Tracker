@@ -1,131 +1,94 @@
-// Mock Data for MedTrack (localStorage version)
+// MedTrack Data Layer
 
-  // Load data from localStorage or use defaults
-  function loadData() {
-      const saved = localStorage.getItem('medtrack_data');
-      if (saved) {
-          return JSON.parse(saved);
-      }
+let appData = {
+    user:          null,
+    patientId:     null,
+    medications:   [],
+    prescriptions: [],
+    taken:         [],
+    appointments:  []
+};
 
-      // Default data (matches database structure)
-      return {
-          user: {
-              id: 1,
-              name: 'John',
-              surname: 'Smith',
-              role: 'patient'
-          },
-          medications: [
-              {
-                  id: 1,
-                  name: 'Lisinopril',
-                  dose: '10mg',
-                  frequency: 'Once daily',
-                  time: '08:00'
-              },
-              {
-                  id: 2,
-                  name: 'Metformin',
-                  dose: '500mg',
-                  frequency: 'Twice daily',
-                  time: '08:00'
-              },
-              {
-                  id: 3,
-                  name: 'Metformin',
-                  dose: '500mg',
-                  frequency: 'Twice daily',
-                  time: '20:00'
-              },
-              {
-                  id: 4,
-                  name: 'Atorvastatin',
-                  dose: '20mg',
-                  frequency: 'Once daily',
-                  time: '21:00'
-              }
-          ],
-          taken: [],
-          refills: [
-              {
-                  id: 1,
-                  medicationName: 'Metformin',
-                  dueDate: '2026-03-10',
-                  daysLeft: 8
-              }
-          ],
-          appointments: [
-              {
-                  id: 1,
-                  title: 'Doctor Checkup',
-                  doctor: 'Dr. Smith',
-                  date: '2026-03-15',
-                  time: '10:00'
-              }
-          ]
-      };
-  }
+async function initAppData() {
+    const user = getUser();
+    if (!user) return;
 
-  // Save data to localStorage
-  function saveData() {
-      localStorage.setItem('medtrack_data', JSON.stringify(appData));
-  }
+    appData.user = user;
 
-  // Initialize app data
-  let appData = loadData();
+    try {
+        if (user.role === 'patient') {
+            const patient        = await apiGetPatient(user.id);
+            appData.patientId    = patient.id;
+            appData.medications    = patient.medications || [];
+            appData.appointments   = await apiGetAppointments(patient.id).catch(() => []);
+            appData.prescriptions  = await apiGetPrescriptions(patient.id).catch(() => []);
 
-  // Helper: Check if medication is taken today
-  function isTakenToday(medId) {
-      const today = new Date().toISOString().split('T')[0];
-      return appData.taken.some(function(record) {
-          return record.visaId === medId && record.date === today;
-      });
-  }
+            // Build taken records from medication logs
+            appData.taken = [];
+            for (const med of appData.medications) {
+                const logs = await apiGetMedicationLogs(med.id);
+                logs.forEach(function(log) {
+                    appData.taken.push({
+                        id:     log.id,
+                        visaId: med.id,
+                        date:   log.taken_date,
+                        time:   log.taken_time
+                    });
+                });
+            }
 
-  // Helper: Mark medication as taken
-  function recordTaken(medId) {
-      const now = new Date();
-      const record = {
-          id: appData.taken.length + 1,
-          visaId: medId,
-          date: now.toISOString().split('T')[0],
-          time: now.toTimeString().split(' ')[0]
-      };
-      appData.taken.push(record);
-      saveData();
-  }
+            loadPatientDashboard();
 
-  // Helper: Get taken records for a specific date
-  function getTakenForDate(dateStr) {
-      return appData.taken.filter(function(record) {
-          return record.date === dateStr;
-      });
-  }
+        } else if (user.role === 'doctor') {
+              // Doctor data is loaded on demand per page, nothing to pre-load
+              showDoctorPage('dashboard');
+          } else if (user.role === 'admin') {
+              showAdminPage('dashboard');
+          }
 
-  // Helper: Calculate adherence for date range
-  function calculateAdherence(startDate, endDate) {
-      let totalDoses = 0;
-      let takenDoses = 0;
+    } catch (err) {
+        console.error('Failed to load app data:', err.message);
+    }
+}
 
-      let current = new Date(startDate);
-      const end = new Date(endDate);
+function isTakenToday(medId) {
+    const today = new Date().toISOString().split('T')[0];
+    return appData.taken.some(function(r) { return r.visaId === medId && r.date === today; });
+}
 
-      while (current <= end) {
-          const dateStr = current.toISOString().split('T')[0];
-          const takenToday = getTakenForDate(dateStr);
+async function recordTaken(medId) {
+    try {
+        await apiLogTaken(medId);
+        const now = new Date();
+        appData.taken.push({
+            id:     Date.now(),
+            visaId: medId,
+            date:   now.toISOString().split('T')[0],
+            time:   now.toTimeString().split(' ')[0]
+        });
+    } catch (err) {
+        console.error('Failed to log medication:', err.message);
+    }
+}
 
-          appData.medications.forEach(function(med) {
-              totalDoses++;
-              if (takenToday.some(function(t) { return t.visaId ===
-  med.id; })) {
-                  takenDoses++;
-              }
-          });
+function getTakenForDate(dateStr) {
+    return appData.taken.filter(function(r) { return r.date === dateStr; });
+}
 
-          current.setDate(current.getDate() + 1);
-      }
+function calculateAdherence(startDate, endDate) {
+    let total = 0, taken = 0;
+    const cur = new Date(startDate);
+    const end = new Date(endDate);
+    while (cur <= end) {
+        const dateStr    = formatDateStr(cur);
+        const takenToday = getTakenForDate(dateStr);
+        appData.medications.forEach(function(med) {
+            total++;
+            if (takenToday.some(function(t) { return t.visaId === med.id; })) taken++;
+        });
+        cur.setDate(cur.getDate() + 1);
+    }
+    return total === 0 ? 0 : Math.round((taken / total) * 100);
+}
 
-      if (totalDoses === 0) return 0;
-      return Math.round((takenDoses / totalDoses) * 100);
-  }
-
+function saveData() {}
