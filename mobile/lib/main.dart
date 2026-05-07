@@ -85,11 +85,13 @@ class _AuthGateState extends State<AuthGate> {
     await prefs.remove('medtrack_token');
     await prefs.remove('medtrack_name');
     await prefs.remove('medtrack_role');
+    await prefs.remove('medtrack_user_id');
 
     setState(() {
       _token = null;
       _name = null;
       _role = null;
+      _userId = null;
     });
   }
 
@@ -174,7 +176,14 @@ class _LoginPageState extends State<LoginPage> {
           : data;
 
       final userId = int.tryParse(
-        (user['id'] ?? data['id'] ?? '').toString(),
+        (user['id'] ??
+                user['user_id'] ??
+                user['patient_id'] ??
+                data['id'] ??
+                data['user_id'] ??
+                data['patient_id'] ??
+                '')
+            .toString(),
       );
 
       if (userId == null) {
