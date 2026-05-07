@@ -30,7 +30,7 @@ async function apiFetch(endpoint, method, body) {
 
 const loginForm = document.getElementById('login-form');
 if (loginForm) {
-    // If already logged in, go straight to app
+    // if already logged in, go straight to app
     if (getToken() && getUser()) {
         window.location.href = 'index.html';
     }

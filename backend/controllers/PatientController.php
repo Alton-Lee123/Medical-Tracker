@@ -13,13 +13,22 @@ class PatientController {
                 p.id, p.date_of_birth, p.`condition`, p.user_id,
                 p.gender, p.allergies, p.previous_injuries, p.last_hospital_visit,
                 u.name, u.surname, u.email,
-                d.id AS doctor_id
+                d.id AS doctor_id,
+                COUNT(m.id) AS medication_count
             FROM patients p
             JOIN users u ON u.id = p.user_id
             LEFT JOIN doctors d ON d.id = p.doctor_id
+            LEFT JOIN medications m ON m.patient_id = p.id
+            GROUP BY p.id
         ');
         $stmt->execute();
-        echo json_encode($stmt->fetchAll());
+        $patients = $stmt->fetchAll();
+
+        foreach ($patients as &$patient) {
+            $patient['adherence'] = $this->calcAdherence($patient['id']);
+        }
+
+        echo json_encode($patients);
     }
 
     public function getOne($id) {
@@ -45,7 +54,33 @@ class PatientController {
         $stmt->execute([$patient['id']]);
         $patient['medications'] = $stmt->fetchAll();
 
+        $patient['adherence'] = $this->calcAdherence($patient['id']);
+
         echo json_encode($patient);
+    }
+
+    private function calcAdherence($patientId) {
+        $stmt = $this->db->prepare('SELECT id FROM medications WHERE patient_id = ?');
+        $stmt->execute([$patientId]);
+        $meds = $stmt->fetchAll();
+
+        if (empty($meds)) return null;
+
+        $medIds       = array_column($meds, 'id');
+        $total        = count($meds) * 30;
+        $placeholders = implode(',', array_fill(0, count($medIds), '?'));
+
+        $stmt = $this->db->prepare("
+            SELECT COUNT(DISTINCT CONCAT(medication_id, '-', taken_date)) AS taken
+            FROM medication_logs
+            WHERE medication_id IN ($placeholders)
+              AND taken_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ");
+        $stmt->execute($medIds);
+        $row   = $stmt->fetch();
+        $taken = (int)($row['taken'] ?? 0);
+
+        return $total > 0 ? round(($taken / $total) * 100) : 0;
     }
 
     public function updateProfile($id, $body) {

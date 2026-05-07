@@ -6,12 +6,26 @@ async function handleLogin() {
     const email    = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const errorEl  = document.getElementById('login-error');
+
     errorEl.classList.add('hidden');
+
+    const captchaToken = document.querySelector(
+        '[name="cf-turnstile-response"]'
+    )?.value;
+
+    if (!captchaToken) {
+        errorEl.textContent = "Please complete the captcha.";
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
     try {
-        const data = await apiLogin(email, password);
+        const data = await apiLogin(email, password, captchaToken);
+
         document.getElementById('login-screen').classList.add('hidden');
         switchLayout(data.role);
         await initAppData();
+
     } catch (err) {
         errorEl.textContent = err.message;
         errorEl.classList.remove('hidden');
@@ -583,11 +597,9 @@ async function loadPatientSettings() {
     if (!container) return;
     const user = getUser();
 
-    // Fetch full patient record for profile fields
     let patient = {};
     try { patient = await apiGetPatient(user.id); } catch(e) {}
 
-    // Compute age from date_of_birth
     function calcAge(dob) {
         if (!dob) return '—';
         const birth = new Date(dob);
@@ -611,7 +623,6 @@ async function loadPatientSettings() {
         '<div style="padding:16px">' +
             '<h1 class="page-title" style="margin-bottom:16px">Settings</h1>' +
 
-            // ── Profile header card ───────────────────────────────────────────
             '<div class="card" style="margin-bottom:16px">' +
                 '<h2 class="section-title">👤 Profile</h2>' +
                 '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">' +
@@ -625,7 +636,6 @@ async function loadPatientSettings() {
                     '</div>' +
                 '</div>' +
 
-                // ── Info grid ─────────────────────────────────────────────────
                 '<div class="profile-info-grid">' +
                     '<div class="profile-info-item">' +
                         '<span class="profile-info-icon">🎂</span>' +
@@ -645,7 +655,6 @@ async function loadPatientSettings() {
                     '</div>' +
                 '</div>' +
 
-                // ── Allergies ─────────────────────────────────────────────────
                 '<div class="profile-detail-block profile-detail-alert">' +
                     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
                         '<span style="font-size:18px">⚠️</span>' +
@@ -654,7 +663,6 @@ async function loadPatientSettings() {
                     '<p class="profile-detail-text">' + allergies + '</p>' +
                 '</div>' +
 
-                // ── Previous Injuries ─────────────────────────────────────────
                 '<div class="profile-detail-block">' +
                     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
                         '<span style="font-size:18px">🩹</span>' +
@@ -679,13 +687,11 @@ async function loadPatientSettings() {
                 '</div>' +
             '</div>' +
 
-            // ── Account card ──────────────────────────────────────────────────
             '<div class="card">' +
                 '<h2 class="section-title">🔒 Account</h2>' +
                 '<button class="btn-delete" style="width:100%;padding:12px;margin-top:8px" onclick="handleLogout()">Sign Out</button>' +
             '</div>' +
 
-            // ── Edit profile modal ────────────────────────────────────────────
             '<div id="edit-profile-modal" class="modal-overlay hidden">' +
                 '<div class="modal" style="max-width:400px">' +
                     '<h2 class="modal-title">Edit Profile Info</h2>' +
@@ -847,13 +853,22 @@ async function renderDoctorPatients() {
         '<div class="doc-page">' +
             '<div class="doc-page-header"><h1 class="doc-title">Patients</h1></div>' +
             '<div class="doc-card" style="padding:0;overflow:hidden">' +
-                '<table class="doc-table"><thead><tr><th>Patient</th><th>Condition</th><th>Email</th><th>Medications</th><th></th></tr></thead><tbody>' +
+                '<table class="doc-table"><thead><tr><th>Patient</th><th>Condition</th><th>Email</th><th>Medications</th><th>Adherence (30d)</th><th></th></tr></thead><tbody>' +
                 patients.map(function(p) {
+                    const adh      = p.adherence !== null && p.adherence !== undefined ? p.adherence : null;
+                    const adhColor = adh === null ? 'var(--muted-foreground)' : adh >= 80 ? 'var(--accent)' : adh >= 60 ? '#f59e0b' : 'var(--destructive)';
+                    const adhLabel = adh === null ? '—' : adh + '%';
                     return '<tr class="patient-row" onclick="viewPatient(' + p.id + ')">' +
                         '<td><div class="patient-name-cell">' + avatarEl(p.name[0]+p.surname[0], 36) + '<span class="pname">' + p.name + ' ' + p.surname + '</span></div></td>' +
                         '<td>' + (p.condition||'—') + '</td>' +
                         '<td>' + p.email + '</td>' +
-                        '<td>' + (p.medications||[]).length + ' meds</td>' +
+                        '<td>' + (p.medication_count || 0) + ' meds</td>' +
+                        '<td><div style="display:flex;align-items:center;gap:8px">' +
+                            '<div style="width:60px;height:6px;background:var(--muted);border-radius:3px;overflow:hidden">' +
+                                '<div style="width:' + (adh||0) + '%;height:100%;background:' + adhColor + ';border-radius:3px"></div>' +
+                            '</div>' +
+                            '<span style="font-weight:600;font-size:13px;color:' + adhColor + '">' + adhLabel + '</span>' +
+                        '</div></td>' +
                         '<td><button class="btn-sm" onclick="event.stopPropagation();viewPatient(' + p.id + ')">View</button></td>' +
                     '</tr>';
                 }).join('') +
@@ -911,7 +926,6 @@ async function viewPatient(id) {
         '<div class="doc-page">' +
             '<div class="doc-page-header"><button class="btn-back" onclick="renderDoctorPatients()">← Back to Patients</button></div>' +
 
-            // ── Patient header ────────────────────────────────────────────────
             '<div class="doc-card patient-detail-header">' + avatarEl(p.name[0]+p.surname[0], 60) +
                 '<div class="pdh-info">' +
                     '<h2 class="doc-title" style="margin:0">' + p.name + ' ' + p.surname + '</h2>' +
@@ -921,7 +935,6 @@ async function viewPatient(id) {
                 '<button class="btn-sm" style="margin-left:auto;align-self:flex-start" onclick="openMessagePatient(' + p.user_id + ', \'' + p.name + ' ' + p.surname + '\')">💬 Message</button>' +
             '</div>' +
 
-            // ── Profile info card ─────────────────────────────────────────────
             '<div class="doc-card" style="margin-bottom:16px">' +
                 '<h2 class="doc-card-title">🪪 Patient Profile</h2>' +
                 '<div class="profile-info-grid" style="margin-top:12px">' +

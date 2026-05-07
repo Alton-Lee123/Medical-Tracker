@@ -37,8 +37,13 @@ async function apiFetch(endpoint, method = 'GET', body = null) {
 async function apiRegister(name, surname, email, password, role) {
     return await apiFetch('/auth/register', 'POST', { name, surname, email, password, role });
 }
-async function apiLogin(email, password) {
-    const data = await apiFetch('/auth/login', 'POST', { email, password });
+async function apiLogin(email, password, captchaToken) {
+    const data = await apiFetch('/auth/login', 'POST', {
+        email,
+        password,
+        captchaToken
+    });
+
     saveAuth(data);
     return data;
 }
@@ -47,11 +52,11 @@ async function apiLogout() {
     clearAuth();
 }
 
-// ── Patients ──────────────────────────────────────────────────────────────────
+// ── patients ──────────────────────────────────────────────────────────────────
 async function apiGetPatients()  { return await apiFetch('/patients'); }
 async function apiGetPatient(id) { return await apiFetch('/patients/' + id); }
 
-// ── Medications ───────────────────────────────────────────────────────────────
+// ── medications ───────────────────────────────────────────────────────────────
 async function apiGetMedications(patientId)                           { return await apiFetch('/medications/' + patientId); }
 async function apiAddMedication(patientId, name, dose, frequency, time) { return await apiFetch('/medications', 'POST', { patient_id: patientId, name, dose, frequency, time }); }
 async function apiUpdateMedication(id, name, dose, frequency, time)   { return await apiFetch('/medications/' + id, 'PUT', { name, dose, frequency, time }); }
@@ -59,18 +64,18 @@ async function apiDeleteMedication(id)                                { return a
 async function apiLogTaken(medicationId)                              { return await apiFetch('/medications/' + medicationId + '/taken', 'POST'); }
 async function apiGetMedicationLogs(medicationId)                     { return await apiFetch('/medications/' + medicationId + '/logs'); }
 
-// ── Appointments ──────────────────────────────────────────────────────────────
+// ── apointments ────────────────────────────────────────────────────────────
 async function apiGetAppointments(patientId)                          { return await apiFetch('/appointments/' + patientId); }
 async function apiAddAppointment(patientId, doctorId, title, date, time) { return await apiFetch('/appointments', 'POST', { patient_id: patientId, doctor_id: doctorId, title, date, time }); }
 async function apiDeleteAppointment(id)                               { return await apiFetch('/appointments/' + id, 'DELETE'); }
 
-// ── Prescriptions ─────────────────────────────────────────────────────────────
+// ── perscriptions ─────────────────────────────────────────────────────────────
 async function apiGetPrescriptions(patientId) { return await apiFetch('/prescriptions/' + patientId); }
 async function apiAddPrescription(data)       { return await apiFetch('/prescriptions', 'POST', data); }
 async function apiUpdatePrescription(id, data){ return await apiFetch('/prescriptions/' + id, 'PUT', data); }
 async function apiDeletePrescription(id)      { return await apiFetch('/prescriptions/' + id, 'DELETE'); }
 
-// ── Messages ──────────────────────────────────────────────────────────────────
+// ── messages ──────────────────────────────────────────────────────────────────
 async function apiGetThreads()                          { return await apiFetch('/messages'); }
 async function apiGetThread(userId)                     { return await apiFetch('/messages/' + userId); }
 async function apiSendMessage(senderId, receiverId, body) { return await apiFetch('/messages', 'POST', { sender_id: senderId, receiver_id: receiverId, body }); }

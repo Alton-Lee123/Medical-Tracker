@@ -57,27 +57,20 @@ switch ($resource) {
         break;
 
     case 'messages':
+        // GET /api/messages                       → all threads for logged-in user
         if      ($method === 'GET'   && !$subresource)                           $message->getThreads($loggedInUserId);
-        elseif  ($method === 'GET'   &&  $subresource)                           $message->getThread($loggedInUserId, $subresource);
+        // GET /api/messages/{userId}              → all threads for the given user (Flutter passes userId in URL)
+        elseif  ($method === 'GET'   &&  $subresource && !$action)               $message->getThreads($subresource);
+        // GET /api/messages/{userId}/thread/{otherId} → single thread between two users
+        elseif  ($method === 'GET'   &&  $subresource && $action)                $message->getThread($subresource, $action);
+        // POST /api/messages                      → send a message
         elseif  ($method === 'POST'  && !$subresource)                           $message->send($body);
+        // PATCH /api/messages/{id}/read           → mark as read
         elseif  ($method === 'PATCH' &&  $subresource && $action === 'read')     $message->markRead($subresource);
         else    http_response_code(404);
         break;
 
     case 'admin':
-            require_once __DIR__ . '/../controllers/AdminController.php';
-        require_once __DIR__ . '/../controllers/MessageController.php';
-
-        $admin = new AdminController($db);
-        $messages = new MessageController($db);
-
-        if ($method === 'GET' && $subresource === 'messages') {
-            $messages->getAllMessages(); 
-        }
-        elseif ($method === 'POST' && $subresource === 'messages') {
-            $messages->sendMessage($body); 
-        }
-        
         require_once __DIR__ . '/../controllers/AdminController.php';
         $admin = new AdminController($db);
         if      ($method === 'GET' && $subresource === 'stats')           $admin->getStats();
@@ -87,8 +80,6 @@ switch ($resource) {
         elseif  ($method === 'PUT' && $subresource === 'doctors' && $action) $admin->updateDoctor($action, $body);
         elseif  ($method === 'GET' && $subresource === 'patients')        $admin->getAllPatients();
         elseif  ($method === 'PUT' && $subresource === 'patients' && $action) $admin->updatePatient($action, $body);
-
-
         else    http_response_code(404);
     break;
 
